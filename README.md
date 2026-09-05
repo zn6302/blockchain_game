@@ -115,15 +115,77 @@ game.js  只管模擬  →  sync.js  只管複製  →  ArenaRoom.js  只管房�
 
 ---
 
+## 部署（一個網址就能玩）
+
+線上版把**前端和伺服器包成同一個容器**：同一個 process 既送網頁也開 WebSocket，
+對外只有一個網址、一個 port。朋友拿到的就是一條連結，不用另外設定伺服器位址。
+
+會這樣選，是因為拆成「前端放 GitHub Pages ＋ 伺服器放別的地方」有幾個代價：
+伺服器網址會被編進前端的 bundle（換位置就得重新 build 前端）、https 頁面連 `ws://`
+會被瀏覽器當成 mixed content 擋掉、還要多管一組 CORS 跟 base path。同一個 origin 就都沒這些問題。
+
+> **GitHub Pages 沒辦法單獨放這個遊戲。** Pages 只能放靜態檔，而 Colyseus 是一個
+> 要一直活著、在記憶體裡拿著房間狀態的 Node process。GitHub Actions 負責「建置與部署」，
+> 真正跑起來的地方要是能跑容器的平台。
+
+### 需要先知道的一件事：只能跑一台
+
+房號跟房間狀態都在單一 process 的記憶體裡（沒有接 Redis presence／driver）。
+機器一旦不只一台，兩個人輸入同一個房號會被分到不同機器、永遠看不到對方。
+所以 `fly.toml` 裡是 `auto_stop_machines = false` ＋ `min_machines_running = 1`，
+部署後也要確認 `fly scale count 1`。這同時表示 Vercel／Netlify／Cloudflare Workers
+這類 serverless 平台都不能用。
+
+四人一房、20 Hz 同步，一台小機器同時開幾十間房是夠的。
+
+### 相關檔案
+
+| 檔案 | 做什麼 |
+|---|---|
+| `Dockerfile` | 三段式：build 前端 → 只裝 production 依賴 → 兜成最後的 image |
+| `.dockerignore` | 不要把 `node_modules`、`.git` 這些送進 build context |
+| `fly.toml` | Fly.io 設定（port、健康檢查、固定一台機器）|
+| `.github/workflows/ci.yml` | PR 與 main 上跑 lint ＋ build |
+| `.github/workflows/deploy.yml` | push 到 main 就自動部署 |
+| `.nvmrc` | 釘住 Node 版本，CI 跟線上一致 |
+
+### 先在本機確認（不用先開機器）
+
+```bash
+npm run preview:prod      # build 前端，然後用 production 模式起伺服器
+```
+
+打開 `http://localhost:2567`：**網頁、WebSocket、房號配對全部走這一個 port**。
+開兩個分頁，一個建立房間、一個輸入同樣的房號加入，看得到對方就代表打包方式是對的。
+（如果 2567 已經被 `npm run server` 佔著，先把它關掉，或用 `PORT=3000 npm run start`。）
+
+### 部署到 Fly.io
+
+```bash
+flyctl launch --no-deploy    # 建 app（fly.toml 的 app 名字要全球唯一，會請你改）
+flyctl deploy                # 第一次手動部署，確認真的起得來
+flyctl scale count 1         # 確認只有一台
+```
+
+接著把 `FLY_API_TOKEN`（用 `flyctl tokens create deploy` 產生）加到 GitHub repo 的
+Actions secrets，之後 push 到 `main` 就會自動部署。
+
+Railway、Render 也可以，都是吃同一份 `Dockerfile`。只要注意 **Render 免費方案會休眠**：
+閒置後第一個連線要等約 50 秒，配對請求會直接逾時，玩家看到的是「連線失敗」。
+
+### 部署後一定要做的確認
+
+用**兩台不同網路的裝置**（不是同一台開兩個分頁）測一次：一個建房唸房號、另一個加入。
+這是本機測不出來的部分——`wss://` 能不能穿過平台的反向代理，只有真的部署上去才知道。
+
+---
+
 ## 目前進度
 
 | 部分 | 狀態 |
 |---|---|
-| 單機版遊玩（你 + 3 個電腦對手） | ✅ 可玩 |
 | `shared/` 公式抽取 | ✅ 完成 |
-| Colyseus 伺服器（房間、大廳、模擬、同步、斷線接手） | ✅ 可啟動，端對端測試通過 |
-| 前端接上伺服器 | ⬜ 尚未開始 |
-
-前端目前完全是本地模擬（`react-app/src/game/combat.js`、`economy.js`），
-還沒有任何 Colyseus client 程式碼。接線時 `S` 的角色會從「本地模擬寫入」改成「鏡射伺服器狀態」，
-形狀不需要改變。
+| Colyseus 伺服器（房間、大廳、模擬、同步、斷線接手） | ✅ 完成 |
+| 前端接上伺服器（房號配對、兩種模式） | ✅ 完成 |
+| 單一容器打包（前端與伺服器同一個 origin） | ✅ 完成，本機驗證通過 |
+| 實際部署到公開網址 | ⬜ 待第一次 `flyctl deploy` |

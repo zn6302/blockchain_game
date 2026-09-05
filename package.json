@@ -6,11 +6,16 @@
     "react-app",
     "server"
   ],
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "npm run dev -w react-app",
     "dev:lan": "npm run dev -w react-app -- --host",
     "build": "npm run build -w react-app",
     "server": "npm run dev -w @noxcat/server",
+    "start": "node server/src/index.js",
+    "preview:prod": "npm run build && node server/src/index.js",
     "lint": "npm run lint -w react-app"
   }
 }

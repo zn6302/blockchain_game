@@ -5,7 +5,8 @@
   "type": "module",
   "main": "src/index.js",
   "scripts": {
-    "dev": "node src/index.js"
+    "dev": "node src/index.js",
+    "start": "node src/index.js"
   },
   "dependencies": {
     "@noxcat/shared": "*",
@@ -13,5 +14,8 @@
     "@colyseus/schema": "5.0.27",
     "@colyseus/ws-transport": "0.18.2",
     "express": "4.22.2"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

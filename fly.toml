@@ -1,0 +1,38 @@
+# Fly.io 部署設定。app 名字要全球唯一,先跑一次 `flyctl launch --no-deploy`
+# 讓它幫你建 app,或自己改成沒被用過的名字。
+
+app = "noxcat-arena"
+primary_region = "nrt"
+
+[build]
+
+[env]
+  PORT = "8080"
+
+[http_service]
+  internal_port = 8080
+  # 前端是 https 頁面,WebSocket 一定要走 wss,所以強制 https。
+  force_https = true
+  # 房號跟房間狀態都在單一 process 的記憶體裡(沒有接 Redis presence/driver),
+  # 機器一旦不只一台,兩個人輸入同一個房號會被分到不同機器、永遠看不到對方。
+  # 所以:不自動關機、永遠保持一台,而且部署後要確認 `fly scale count 1`。
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = "connections"
+    hard_limit = 200
+    soft_limit = 150
+
+# 平台的健康檢查走 HTTP,server/src/index.js 的 /health 就是給它用的。
+[[http_service.checks]]
+  interval = "30s"
+  timeout = "5s"
+  grace_period = "10s"
+  method = "GET"
+  path = "/health"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
