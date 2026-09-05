@@ -14,9 +14,7 @@ function wsEndpoint() {
 }
 
 /* ---------------- 房號配對 ----------------
-   房號就是伺服器 filterBy(["code"]) 用的鍵:同一個 code 才會配到同一間房。
-   建房用 joinOrCreate 而不是 create——萬一兩個人剛好抽到同一組號碼,
-   後來的那個人是「加入同號房」,而不是開出第二間同號房讓別人配錯邊。 */
+   房號就是伺服器 filterBy(["code"]) 用的鍵:同一個 code 才會配到同一間房。 */
 /* 隨機配對共用的公共房。兩種模式各一間,不然快速配對會把想玩簡化版的人
    丟進完整版的房(房間的模式是建房時就定死的)。抽號從 1000 起,不會撞到。 */
 const PUBLIC_CODE = { full: "0000", simple: "0001" };
@@ -28,7 +26,7 @@ export function normalizeCode(raw) {
   return String(raw ?? "").replace(/\D/g, "").slice(0, 4);
 }
 export function isPublicCode(code) {
-  return code === PUBLIC_CODE;
+  return Object.values(PUBLIC_CODE).includes(code);
 }
 
 /* Colyseus 找不到符合 code 的房就丟 521;其餘照伺服器訊息顯示(房間已滿/已開始)。 */
@@ -160,7 +158,7 @@ export function createEngine() {
     const code = makeRoomCode();
     const opts = { code, mode: mode === "simple" ? "simple" : "full" };
     if (name) opts.name = name;
-    return enterRoom(c => c.joinOrCreate("arena", opts), code);
+    return enterRoom(c => c.create("game", opts), code);
   }
   function joinRoom(rawCode, name) {
     const code = normalizeCode(rawCode);
@@ -169,14 +167,14 @@ export function createEngine() {
       notify();
       return Promise.resolve();
     }
-    return enterRoom(c => c.join("arena", name ? { code, name } : { code }), code);
+    return enterRoom(c => c.join("game", name ? { code, name } : { code }), code);
   }
   function quickMatch(name, mode) {
     const m = mode === "simple" ? "simple" : "full";
     const code = PUBLIC_CODE[m];
     const opts = { code, mode: m };
     if (name) opts.name = name;
-    return enterRoom(c => c.joinOrCreate("arena", opts), code);
+    return enterRoom(c => c.joinOrCreate("game", opts), code);
   }
   function leaveRoom() {
     if (room) { room.leave(); room = null; }

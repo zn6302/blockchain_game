@@ -38,6 +38,10 @@ export class ArenaRoom extends Room {
       },
     });
 
+    /* 開局前就把初始幣價寫進 Schema。否則 coins 是空 MapSchema，Colyseus
+       的第一份狀態可能不包含它，client 在大廳鏡射 coins 時會拿到 undefined。 */
+    syncState(this.state, this.game);
+
     this.onMessage("pickClass", (client, msg) => {
       if (this.state.phase !== "lobby") return;
       const pi = this.seatOf.get(client.sessionId);
