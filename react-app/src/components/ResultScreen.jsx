@@ -12,7 +12,7 @@ export default function ResultScreen() {
 
   return (
     <div className="ov" id="resultOv">
-      <div className="panel" style={{ maxWidth: 620, maxHeight: "88vh", overflowY: "auto" }}>
+      <div className="panel scrolly" style={{ maxWidth: 620 }}>
         <div className="ipres">
           <img src={IP_CAT} alt="NOXCAT" />
           <div className="reshead">
