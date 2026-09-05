@@ -19,8 +19,8 @@ const MAPB = (() => {                                   // 地圖的實際世界
   return { x0, y0, x1, y1 };
 })();
 export function fitView() { return { x: (MAPB.x0 + MAPB.x1) / 2, y: (MAPB.y0 + MAPB.y1) / 2, z: 1 }; }
-export function homeView() {
-  const b = ZONES.find(z => z[2] === "base" && z[3] === 0);
+export function homeView(myIndex) {
+  const b = ZONES.find(z => z[2] === "base" && z[3] === (myIndex ?? 0));
   const { x, y } = hexXY(b[0], b[1]);
   return { x: x + 40, y: y + 18, z: window.innerWidth < 900 ? 1.6 : 1.75 };
 }
@@ -141,7 +141,7 @@ export function createMapView(svgEl, { onTileClick } = {}) {
     });
     const front = order.filter(i => ZONES[i][2] === "exchange");        // 交易所的地塊最後畫，蓋在別塊上面
     const rest = order.filter(i => ZONES[i][2] !== "exchange");
-    const tiles = rest.concat(front).map(tileSVG);
+    const tiles = rest.concat(front).map(idx => tileSVG(idx, S.myIndex ?? 0));
     let s = tiles.map(t => t.g).join("");
     PROPS.length = 0;
     tiles.forEach(t => t.props.forEach(pr => PROPS.push(pr)));
@@ -150,26 +150,27 @@ export function createMapView(svgEl, { onTileClick } = {}) {
     ZONES.forEach(([q, r, type, owner], idx) => {
       if (type !== "base") return;
       const { x, y } = hexXY(q, r), ly = y - HEXR * KY - 14;
-      const me = owner === 0;
+      const me = owner === (S.myIndex ?? 0);
+      const myCol = PLAYER_COLORS[S.myIndex ?? 0];
       if (me) {
         const cy = y + 6, mt = `matrix(1,0,0,${KY},0,${(cy * (1 - KY)).toFixed(1)})`;
         s += `<ellipse cx="${x.toFixed(1)}" cy="${cy.toFixed(1)}" rx="${(HEXR * 0.86).toFixed(1)}"
-              ry="${(HEXR * 0.86 * KY).toFixed(1)}" fill="${PLAYER_COLORS[0]}" opacity=".10"/>`;
+              ry="${(HEXR * 0.86 * KY).toFixed(1)}" fill="${myCol}" opacity=".10"/>`;
         s += `<g class="youring"><circle cx="${x.toFixed(1)}" cy="${cy.toFixed(1)}" r="${(HEXR * 0.66).toFixed(1)}"
-              fill="none" stroke="${PLAYER_COLORS[0]}" stroke-width="3" transform="${mt}"/></g>`;
+              fill="none" stroke="${myCol}" stroke-width="3" transform="${mt}"/></g>`;
         s += `<g class="youspin"><circle cx="${x.toFixed(1)}" cy="${cy.toFixed(1)}" r="${(HEXR * 0.52).toFixed(1)}"
-              fill="none" stroke="${PLAYER_COLORS[0]}" stroke-width="1.6" stroke-dasharray="7 9"
+              fill="none" stroke="${myCol}" stroke-width="1.6" stroke-dasharray="7 9"
               opacity=".7" transform="${mt}"/></g>`;
         for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
           const bx = x + sx * HEXR * 0.74, by = cy + sy * HEXR * 0.5 * KY;
           s += `<path d="M${(bx - sx * 10).toFixed(1)},${by.toFixed(1)} L${bx.toFixed(1)},${by.toFixed(1)} L${bx.toFixed(1)},${(by - sy * 7).toFixed(1)}"
-                fill="none" stroke="${PLAYER_COLORS[0]}" stroke-width="2.4" opacity=".85"/>`;
+                fill="none" stroke="${myCol}" stroke-width="2.4" opacity=".85"/>`;
         }
         s += `<g class="youbob"><path d="M${x.toFixed(1)},${(y - HEXR * KY - 24).toFixed(1)}
-              l-8,-11 l16,0 Z" fill="${PLAYER_COLORS[0]}"/></g>`;
+              l-8,-11 l16,0 Z" fill="${myCol}"/></g>`;
       }
       s += `<text class="basetag" x="${x.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle"
-            fill="${PLAYER_COLORS[owner]}">${me ? "YOU  P1" : "P" + (owner + 1)}</text>`;
+            fill="${PLAYER_COLORS[owner]}">${me ? `YOU  P${owner + 1}` : "P" + (owner + 1)}</text>`;
     });
     s += '</g><g id="zoneFx" style="pointer-events:none"></g>';
     // 前景與角色交錯：把場景切成一條條水平帶，角色插進對應的帶裡，
@@ -205,7 +206,7 @@ export function createMapView(svgEl, { onTileClick } = {}) {
   }
 
   function makeNode(u) {
-    const d = UNITS[u.k], ch = COINS[u.coin], c = PLAYER_COLORS[u.p], mine = u.p === 0;
+    const d = UNITS[u.k], ch = COINS[u.coin], c = PLAYER_COLORS[u.p], mine = u.p === S.myIndex;
     const sk = SPR_OF[u.k] || u.k, sp = SPRITES[sk], box = sp.box;
     const H = (u.k === "titan" ? 52 : 30), W = H * (box[0] + 2) / (box[1] + 2), bw = Math.max(16, W * 0.72);
     const g = document.createElementNS(NS, "g");
@@ -443,7 +444,7 @@ export function createMapView(svgEl, { onTileClick } = {}) {
 
   function zoomIn() { animateTo({ x: CAM.x, y: CAM.y, z: CAM.z * 1.16 }, 200); }
   function zoomOut() { animateTo({ x: CAM.x, y: CAM.y, z: CAM.z / 1.16 }, 200); }
-  function home() { animateTo(homeView(), 420); }
+  function home() { animateTo(homeView(S.myIndex), 420); }
   function focusOn(x, y) { animateTo({ x, y: y - 10, z: Math.max(CAM.z, 1.6) }, 320); }
 
   function destroy() { cleanupFns.forEach(fn => fn()); cleanupFns = []; }
@@ -453,7 +454,7 @@ export function createMapView(svgEl, { onTileClick } = {}) {
     drawUnits, drawFx, drawZoneFx,
     zoomIn, zoomOut, home, focusOn,
     animateTo, clampCam, applyCam,
-    setInitialCamera() { Object.assign(CAM, homeView()); clampCam(); applyCam(); },
+    setInitialCamera() { Object.assign(CAM, homeView(S.myIndex)); clampCam(); applyCam(); },
     hideTip,
   };
 }

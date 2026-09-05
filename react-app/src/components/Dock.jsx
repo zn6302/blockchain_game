@@ -1,8 +1,7 @@
 import { COINS, CK, UNITS, ROSTER, PACK, SPR_OF, ALLIN_MIN, CLASSES, PLAYER_COLORS } from "../game/constants.js";
 import { SPRITES } from "../game/sprites.js";
 import { ZONES, ZINFO } from "@noxcat/shared/board.js";
-import { S, money, posValue, unitWorth, settleValue, costOf, cdMulOf, BASE_INCOME, catchUpMul } from "../game/state.js";
-import { groupTroops } from "../game/combat.js";
+import { S, money, posValue, unitWorth, settleValue, costOf, cdMulOf, BASE_INCOME, catchUpMul, groupTroops } from "../game/state.js";
 import { useEngineVersion } from "../hooks/useEngineStore.js";
 
 function TargetLine() {
@@ -23,7 +22,7 @@ function Ticker() {
     const c = COINS[k], chg = (c.price / c.ref - 1) * 100, up = chg >= 0, dead = c.price <= 0.002;
     const hot = S.trend && S.trend.c === k;
     let expo = 0, n = 0;
-    S.units.forEach(u => { if (u.alive && u.p === 0 && u.coin === k) { expo += unitWorth(u); n++; } });
+    S.units.forEach(u => { if (u.alive && u.p === S.myIndex && u.coin === k) { expo += unitWorth(u); n++; } });
     return (
       <div className={`tk ${hot ? "hot" : ""}`} key={k}>
         <b style={{ color: c.hex }}>{k}</b>
@@ -39,10 +38,10 @@ function Ticker() {
 
 export default function Dock({ engine }) {
   useEngineVersion(engine);
-  const p = S.players[0];
+  const p = S.players[S.myIndex];
   if (!p) return null;
 
-  const mineUnits = S.units.filter(u => u.alive && u.p === 0);
+  const mineUnits = S.units.filter(u => u.alive && u.p === S.myIndex);
   const gs = groupTroops(mineUnits);
 
   const list = ROSTER.filter(k => k !== "titan" && COINS[UNITS[k].coin].price > 0.002)
@@ -50,7 +49,7 @@ export default function Dock({ engine }) {
   const cheap = list[0];
   const broke = p.alive && !mineUnits.length && cheap && p.cash < cheap.c;
 
-  const lead = (S.cls && CLASSES[S.cls].lead) || 6;
+  const lead = (p.cls && CLASSES[p.cls].lead) || 6;
   const evc = S.trend ? S.trend.c : ((S.pending && S.evtT <= lead && S.evtT > 0) ? S.pending.c : null);
   const now = performance.now();
 
@@ -102,7 +101,7 @@ export default function Dock({ engine }) {
       </div>
       <div className="sep"></div>
       <div className="dockcol">
-        <span className="lab">召喚＝買入 · 1–6　<b id="mecolor" style={{ color: PLAYER_COLORS[0] }}>YOU = P1</b></span>
+        <span className="lab">召喚＝買入 · 1–6　<b id="mecolor" style={{ color: PLAYER_COLORS[S.myIndex] }}>YOU = P{S.myIndex + 1}</b></span>
         <div className="units" id="units">
           {ROSTER.map((k, i) => {
             const u = UNITS[k], c = COINS[u.coin];

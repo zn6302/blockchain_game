@@ -1,10 +1,13 @@
 import { S, money, netWorth } from "../game/state.js";
-import { lessons } from "../game/lessons.js";
 
 export default function ResultScreen() {
   const rank = [...S.players].sort((a, b) => (b.alive - a.alive) || (netWorth(b) - netWorth(a)));
-  const win = rank[0], meWin = win.me;
-  const me = S.players[0], st = S.stats, chg = netWorth(me) / me.start - 1;
+  const win = rank[0], meWin = win.i === S.myIndex;
+  const me = S.players[S.myIndex], st = S.stats;
+  const chg = st && me ? netWorth(me) / me.start - 1 : 0;
+  const lessons = S.lessonsCache || [];
+
+  if (!me || !st) return null;
 
   return (
     <div className="ov" id="resultOv">
@@ -31,7 +34,7 @@ export default function ResultScreen() {
         </div>
         <div className="lsnhead">你剛剛做的事，其實都有名字</div>
         <div className="lessons" id="lessons">
-          {lessons().map(([term, t, d], i) => (
+          {lessons.map(([term, t, d], i) => (
             <div className="lsn" key={i}><i className="term">{term}</i><b>{t}</b><p>{d}</p></div>
           ))}
         </div>

@@ -302,7 +302,8 @@ export function pFlag(x,y,h,col){
 }
 
 /* ---------------- 單一地塊的 SVG（供 renderMap 組合整張地圖） ---------------- */
-export function tileSVG(idx){
+export function tileSVG(idx,myIndex){
+  myIndex=myIndex??0;
   const [q,r,type,owner]=ZONES[idx], z=ZINFO[type], {x,y}=hexXY(q,r);
   const rg=rngFor(idx*97+13);
   const water=(type==="vault");
@@ -355,9 +356,9 @@ export function tileSVG(idx){
     }
   }
   if(type==="base"){
-    s+=PG(isoPts(x,y,0.93*F),"none",`stroke="${PLAYER_COLORS[owner]}" stroke-width="${owner===0?3.4:2.2}"
-        stroke-linejoin="round" opacity="${owner===0?.95:.7}"`);
-    if(owner===0) s+=PG(isoPts(x,y,0.8*F),PLAYER_COLORS[0],'opacity=".08"');
+    s+=PG(isoPts(x,y,0.93*F),"none",`stroke="${PLAYER_COLORS[owner]}" stroke-width="${owner===myIndex?3.4:2.2}"
+        stroke-linejoin="round" opacity="${owner===myIndex?.95:.7}"`);
+    if(owner===myIndex) s+=PG(isoPts(x,y,0.8*F),PLAYER_COLORS[myIndex],'opacity=".08"');
     add(pHouse(x+4,y+12,15,14,PLAYER_COLORS[owner],"#1E2A1C",true));
     add(pHouse(x-24,y+20,10,9,PLAYER_COLORS[owner],"#1E2A1C",false));
     add(pFlag(x+26,y+4,30,PLAYER_COLORS[owner]));

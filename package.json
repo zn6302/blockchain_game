@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "dev": "npm run dev -w react-app",
+    "dev:lan": "npm run dev -w react-app -- --host",
     "build": "npm run build -w react-app",
     "server": "npm run dev -w @noxcat/server",
     "lint": "npm run lint -w react-app"

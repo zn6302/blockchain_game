@@ -1,14 +1,14 @@
 import { COINS, UNITS, SPR_OF } from "../game/constants.js";
 import { SPRITES } from "../game/sprites.js";
-import { S, money, posTotal } from "../game/state.js";
-import { groupTroops } from "../game/combat.js";
+import { S, money, posTotal, groupTroops } from "../game/state.js";
 import { useEngineVersion } from "../hooks/useEngineStore.js";
 
 export default function TroopPanel({ engine }) {
   useEngineVersion(engine);
-  const mine = S.units.filter(u => u.alive && u.p === 0);
+  const mine = S.units.filter(u => u.alive && u.p === S.myIndex);
   const gs = groupTroops(mine);
-  const count = mine.length ? mine.length + " 隻 · " + money(posTotal(S.players[0])) : "0 隻";
+  const me = S.players[S.myIndex];
+  const count = mine.length ? mine.length + " 隻 · " + money(posTotal(me)) : "0 隻";
 
   const pick = (o) => engine.focusUnit(o.units[0]);
   const doSettle = (e, o) => { e.stopPropagation(); engine.settleGroup(o.k, o.coin); };

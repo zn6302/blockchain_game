@@ -20,7 +20,7 @@ function Legend({ engine }) {
   );
 }
 
-export default function MapStage({ engine, clsKey }) {
+export default function MapStage({ engine }) {
   useEngineVersion(engine);
   const svgRef = useRef(null);
   const viewRef = useRef(null);
@@ -30,7 +30,9 @@ export default function MapStage({ engine, clsKey }) {
     const view = createMapView(svgRef.current, { onTileClick: (idx) => engine.selectTile(idx) });
     viewRef.current = view;
     engine.setMapView(view);
-    engine.start(clsKey);
+    view.render();
+    view.attachInteraction({ onSelectUnit: (id) => engine.selectUnit(id) });
+    view.setInitialCamera();
     setIntroOn(true);
     const t = setTimeout(() => setIntroOn(false), 2600);
 
@@ -48,7 +50,7 @@ export default function MapStage({ engine, clsKey }) {
     return () => {
       clearTimeout(t);
       removeEventListener("keydown", onKeydown);
-      engine.stop();
+      engine.setMapView(null);
       view.destroy();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

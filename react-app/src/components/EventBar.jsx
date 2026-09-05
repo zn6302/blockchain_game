@@ -5,7 +5,8 @@ import { useEngineVersion } from "../hooks/useEngineStore.js";
 
 export default function EventBar({ engine }) {
   useEngineVersion(engine);
-  const lead = (S.cls && CLASSES[S.cls].lead) || 6;
+  const myCls = S.players[S.myIndex]?.cls;
+  const lead = (myCls && CLASSES[myCls].lead) || 6;
   const warnPhase = (!S.trend && S.pending && S.evtT <= lead && S.evtT > 0);
   if (!S.trend && !warnPhase) return <div className="evtbar" id="evtbar" />;
 
@@ -14,7 +15,7 @@ export default function EventBar({ engine }) {
   const units = COIN_UNITS[coin];
   const pct = Math.round((c.price / c.ref - 1) * 100);
   const t = S.trend ? S.trend.t : S.evtT, tot = S.trend ? TREND_T : lead;
-  const insight = S.cls && CLASSES[S.cls].insight && !S.trend
+  const insight = myCls && CLASSES[myCls].insight && !S.trend
     ? `（預估 ${S.pending.f >= 1 ? "+" : "−"}${Math.round(Math.abs(S.pending.f - 1) * 100)}%）` : "";
 
   return (

@@ -6,7 +6,7 @@ export default function Hud({ engine }) {
   const players = S.players;
   const rank = [...players].sort((a, b) => netWorth(b) - netWorth(a));
   const top = rank[0];
-  const place = rank.findIndex(p => p.me) + 1;
+  const place = rank.findIndex(p => (p.i === S.myIndex)) + 1;
   const t = Math.max(0, S.t), m = Math.floor(t / 60), sec = Math.floor(t % 60);
   const timeTxt = `${m}:${String(sec).padStart(2, "0")}`;
 
@@ -21,7 +21,7 @@ export default function Hud({ engine }) {
           const w = netWorth(p), pct = Math.max(0, Math.min(100, w / p.start * 100));
           const n = S.units.filter(u => u.p === p.i && u.alive).length;
           return (
-            <div className={`pl ${p.me ? "me" : ""} ${p.alive ? "" : "dead"}`} key={p.i}>
+            <div className={`pl ${(p.i === S.myIndex) ? "me" : ""} ${p.alive ? "" : "dead"}`} key={p.i}>
               <div className="row">
                 <div className="nm">
                   <i className="dot" style={{ background: p.color }}></i>

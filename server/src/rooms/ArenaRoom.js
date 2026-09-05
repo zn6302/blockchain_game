@@ -13,7 +13,7 @@ export class ArenaRoom extends Room {
   onCreate() {
     this.setState(new GameState());
     for (let i = 0; i < 4; i++) {
-      this.state.players.push(new PlayerState({ i, isBot: true }));
+      this.state.players.push(new PlayerState({ i, isBot: true, name: `電腦 ${i + 1}` }));
     }
 
     this.seatOf = new Map();               // sessionId -> seat index
