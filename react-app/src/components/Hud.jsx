@@ -37,7 +37,7 @@ export default function Hud({ engine }) {
         })}
       </div>
       {top && (
-        <div className="leadchip" id="leadchip" style={{ display: "flex" }}>
+        <div className="leadchip" id="leadchip">
           <span>你第 {place} 名</span>
           <span style={{ color: "var(--faint)" }}>·</span>
           <i style={{ background: top.color }}></i>

@@ -2,13 +2,13 @@
 /* COINS 是有狀態的(price 會變動),所以用 factory 產生——client 每個分頁一份、
    server 每個房間一份,彼此獨立,不共用同一個物件。 */
 const COIN_DEFS = {
-  NOX: { name: "NOXCAT", sub: "NOX · 最穩定，幾乎不動", price: 1, vol: 0.0015, hex: "#A3E635" },
+  NOX: { name: "NOXCAT", sub: "NOX · 最穩定，幾乎不動", price: 1, vol: 0.0015, hex: "#91D500" },
   CATN: { name: "貓薄荷幣", sub: "CATN · 中波動 · 後期強", price: 12.4, vol: 0.008, hex: "#4FD1C5" },
   MEOW: { name: "喵喵迷因幣", sub: "MEOW · 高波動 · 可能歸零", price: 3.2, vol: 0.022, hex: "#F5A524" }
 };
 /* 簡化版：全場只有一種幣，波動大到看得出漲跌，但不會有「押錯幣種」這件事。 */
 const SIMPLE_COIN_DEFS = {
-  NOX: { name: "NOXCAT", sub: "NOX · 會漲會跌", price: 3.2, vol: 0.02, hex: "#A3E635" }
+  NOX: { name: "NOXCAT", sub: "NOX · 會漲會跌", price: 3.2, vol: 0.02, hex: "#91D500" }
 };
 
 export const MODES = ["full", "simple"];
@@ -62,12 +62,46 @@ export function isLocked(mode, k, t) {
 export function lockLeft(t) { return Math.max(0, Math.ceil(t - LATE_T)); }
 
 export const PCOL = ["w", "c", "o", "p"];
-export const ROSTER = ["miner", "soldier", "guard", "assassin", "pro", "titan"]; // 由便宜到貴排，越右邊越強
+/* 召喚列只放五張卡，由便宜到貴排。巨獸不在這排——它現在是梭哈青年的大招，
+   其他身份這局根本召不出巨獸，所以每個人的第六個按鈕都是自己的那一招。 */
+export const ROSTER = ["miner", "soldier", "guard", "assassin", "pro"];
+export const ORDER_ALL = [...ROSTER, "titan"];
 export const SPR_OF = { miner: "miner", guard: "guard", soldier: "soldier", assassin: "assassin", pro: "pro", titan: "titan" }; // 第六格＝來個大的
 export const COIN_UNITS = { NOX: "超級礦工・巨獸", MEOW: "士兵・刺客", CATN: "礦工・守衛" };
 const SIMPLE_COIN_UNITS = { NOX: "所有貓咪" };
 export function coinUnitsFor(mode) { return isSimple(mode) ? SIMPLE_COIN_UNITS : COIN_UNITS; }
 export const ALLIN_MIN = 300;
+
+/* ============================ 大招 ============================ */
+/* 一個身份一招，冷卻 60 秒（一場三分鐘 ≈ 放得了三次）。招式本身就是那個身份
+   在現實裡對應的投資行為，賽後的 lessons 會把它翻成名詞講給玩家聽。
+   min = 發動所需的最低 Cash（不足就按不下去，梭哈青年是把 Cash 全押出去）。 */
+export const ULT_CD = 60;
+export const ULTS = {
+  office: {
+    n: "定期定額", g: "DCA", spr: "pro", min: 120,
+    d: "24 秒內每 3 秒自動買一隻礦工，不管幣價漲跌",
+    term: "定期定額 · DCA"
+  },
+  saver: {
+    n: "鎖倉", g: "STAKE", spr: "guard", min: 0,
+    d: "12 秒內你的貓不會受傷，期間結算保證不虧本",
+    term: "質押鎖倉 · Staking"
+  },
+  degen: {
+    n: "巨獸 ALL-IN", g: "ALLIN", spr: "titan", min: ALLIN_MIN,
+    d: "手上的 Cash 全押，召喚一隻巨獸",
+    term: "部位大小 · Position Sizing"
+  },
+  insider: {
+    n: "內線消息", g: "ALPHA", spr: "assassin", min: 0,
+    d: "立刻知道下一則新聞，而且它 8 秒後才發動",
+    term: "資訊優勢 · Information Edge"
+  }
+};
+export const DCA_T = 24, DCA_EVERY = 3;      // 定期定額：總長 24 秒，每 3 秒買一次
+export const STAKE_T = 12;                   // 鎖倉：12 秒無敵＋保本
+export const ALPHA_T = 8;                    // 內線消息：新聞延後 8 秒才發動
 
 /* 身份＝現實中不同的投資人處境：錢從哪來、有多少本金、承受得住多大波動 */
 export const CLASSES = {
@@ -100,5 +134,5 @@ export const CLASSES = {
     lo: 0.75, hi: 1.4, lead: 12, insight: true
   }
 };
-export const PLAYER_COLORS = ["#A3E635", "#4FD1C5", "#F5A524", "#E2557A"];
+export const PLAYER_COLORS = ["#91D500", "#4FD1C5", "#F5A524", "#E2557A"];
 export const AI_NAMES = ["巨鯨_0x7f", "散戶聯盟", "做市商 MM"];

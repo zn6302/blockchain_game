@@ -8,6 +8,11 @@ import { SFX, sfxInit, sfx } from "./audio.js";
    存活時間是純視覺概念,原本活在 combat.js 的 fx.js 裡,現在搬到這裡, "接到就補上"。 */
 const FX_LIFE = { shot: 0.13, hit: 0.24, dmg: 0.85, kill: 0.5, coin: 1.05 };
 
+/* 幣價走勢圖要有一段歷史才畫得出來,但伺服器只同步「現在的價格」——歷史純粹是
+   看的,每個 client 自己留一份就好,不值得每個 tick 多送 40 個數字上線。這裡照
+   伺服器 tickPrices 的節奏(0.35s)自己往後推,取樣密度跟伺服器一致。 */
+const HIST_N = 40, HIST_EVERY = 0.35;
+
 /* 開發時前端在 vite 的 5173、伺服器在 2567,是兩個 port;
    上線後同一個容器既送網頁也開 WebSocket,是同一個 origin——
    所以 prod 用 location.host(帶著這一頁的 port,https 頁面自動走 wss),
@@ -59,7 +64,8 @@ export function createEngine() {
   let version = 0;
   let mapView = null;
   let room = null;
-  let rafId = 0, last = 0, uiAcc = 0;
+  let rafId = 0, last = 0, uiAcc = 0, histAcc = 0;
+  let histSeeded = false;
 
   function notify() {
     version++;
@@ -70,7 +76,7 @@ export function createEngine() {
     S.players = state.players.map(p => ({
       i: p.i, name: p.name, color: p.color, cls: p.cls, cash: p.cash, start: p.start,
       alive: p.alive, isBot: p.isBot, sessionId: p.sessionId, auto: p.auto, allin: p.allin,
-      reliefT: p.reliefT, cd: Object.fromEntries(p.cd),
+      reliefT: p.reliefT, ultCd: p.ultCd, lockT: p.lockT, cd: Object.fromEntries(p.cd),
     }));
     S.myIndex = S.players.findIndex(p => p.sessionId && p.sessionId === S.mySessionId);
   }
@@ -87,6 +93,20 @@ export function createEngine() {
     state.coins.forEach((c, k) => {
       if (!COINS[k]) COINS[k] = { name: k, sub: "", hex: "#8A9583", hist: [] };
       COINS[k].price = c.price; COINS[k].ref = c.ref;
+    });
+    /* 第一次拿到伺服器的價格時把整條歷史鋪平成當下的價格,不然走勢圖會從
+       constants.js 的預設價一路衝到實際價,開場先給玩家看一根假的暴漲。 */
+    if (!histSeeded) {
+      Object.keys(COINS).forEach(k => { COINS[k].hist = Array.from({ length: HIST_N }, () => COINS[k].price); });
+      histSeeded = true;
+    }
+  }
+  function pushHist() {
+    Object.keys(COINS).forEach(k => {
+      const c = COINS[k];
+      if (!c.hist) c.hist = [];
+      c.hist.push(c.price);
+      while (c.hist.length > HIST_N) c.hist.shift();
     });
   }
   function mirrorState(state) {
@@ -111,6 +131,8 @@ export function createEngine() {
     if (!last) last = ts;
     const dt = Math.min(0.05, (ts - last) / 1000); last = ts;
     if (S.fx.length) { S.fx.forEach(f => { f.t -= dt; }); S.fx = S.fx.filter(f => f.t > 0); }
+    histAcc += dt;
+    if (histAcc >= HIST_EVERY) { histAcc = 0; pushHist(); }
     if (mapView) { mapView.drawUnits(); mapView.drawFx(); }
     uiAcc += dt;
     if (uiAcc >= 0.15) {
@@ -151,7 +173,7 @@ export function createEngine() {
       room.onLeave(() => { stop(); room = null; });
 
       notify();
-      last = 0; uiAcc = 0;
+      last = 0; uiAcc = 0; histAcc = 0; histSeeded = false;
       rafId = requestAnimationFrame(renderLoop);
     } catch (err) {
       room = null;
@@ -188,6 +210,7 @@ export function createEngine() {
   }
   function leaveRoom() {
     if (room) { room.leave(); room = null; }
+    histSeeded = false;
     stop();
     resetRoomState();
     notify();
@@ -210,7 +233,12 @@ export function createEngine() {
     flashUnit(k);
     room && room.send("summon", { k, zone: S.sel });
   }
-  function allIn(k) { room && room.send("allIn", { k, zone: S.sel }); }
+  /* 大招:能不能放、放了會怎樣全部由伺服器判斷,client 只負責把按鈕閃一下,
+     免得同一顆按鈕在本地與伺服器各有一套規則,兩邊對不起來。 */
+  function useUlt() {
+    flashUnit("ult");
+    room && room.send("useUlt");
+  }
   function settleOne() {
     if (S.selU == null) return;
     room && room.send("settleOne", { unitId: S.selU });
@@ -238,7 +266,7 @@ export function createEngine() {
     pickClass, startNow,
     selectTile, selectUnit, focusUnit,
     settleOne, settleAll, settleGroup,
-    summon, allIn,
+    summon, useUlt,
     toggleAuto, toggleSfx,
   };
 }

@@ -1,54 +1,86 @@
+/* ============================================================
+   排版順序很重要:所有「基礎樣式」都放在最前面,media query 一律放最後。
+   之前 overlay 畫面(選角/大廳/結算)的基礎規則寫在 @media 後面,同權重下
+   後者勝,手機版規則整組被蓋掉 —— 那是這份檔案最大的 RWD bug。
+   ============================================================ */
+
 :root{
   --ink:#080A08; --panel:#111511; --panel-2:#161B15; --line:#242C23;
-  --lime:#A3E635; --lime-dim:#6E9E22; --lime-soft:rgba(163,230,53,.12);
+  --lime:#91D500; --lime-dim:#5C8A00; --lime-soft:rgba(145,213,0,.12);
   --txt:#E8EFE3; --muted:#8A9583; --faint:#5B6558;
-  --up:#A3E635; --down:#F2555A; --stable:#4FD1C5; --mid:#F5A524; --p4:#E2557A;
+  --up:#91D500; --down:#F2555A; --stable:#4FD1C5; --mid:#F5A524; --p4:#E2557A;
   --shadow:0 10px 30px rgba(0,0,0,.55);
   --mono:"Chakra Petch",ui-monospace,monospace;
   --sans:"Noto Sans TC","Chakra Petch",system-ui,sans-serif;
   --pixel:"Press Start 2P","Noto Sans TC",monospace;
+
+  /* 操作列的尺寸用 clamp 隨視窗寬度連續縮放。
+     以前是 1240px 一個斷點硬切,900–1240 之間(iPad 橫式最明顯)整條操作列
+     算出來比舞台還寬,右邊的「結算/全部結算」會被切掉。改成連續縮放後,
+     斷點只負責「版型要不要換」,不再負責「東西塞不塞得下」。 */
+  --u-w:clamp(56px,5.8vw,88px);        /* 召喚卡寬 */
+  --u-img:clamp(30px,2.9vw,44px);      /* 召喚卡裡的貓圖高 */
+  --a-w:clamp(74px,6.9vw,104px);       /* 結算鍵寬 */
+  --ult-w:clamp(120px,11.5vw,172px);   /* 大招鍵寬 */
+  --cash-w:clamp(112px,11.5vw,172px);  /* 現金欄最小寬 */
+  --dock-gap:clamp(6px,.8vw,12px);
+  --unit-gap:clamp(5px,.55vw,8px);
+
+  /* 安全區:index.html 用了 viewport-fit=cover,瀏海與 home indicator 底下
+     的區域要自己讓開,不然操作列會被指示條蓋住。 */
+  --sa-l:env(safe-area-inset-left,0px);
+  --sa-r:env(safe-area-inset-right,0px);
+  --sa-t:env(safe-area-inset-top,0px);
+  --sa-b:env(safe-area-inset-bottom,0px);
 }
 *{box-sizing:border-box}
 body{background:var(--ink);color:var(--txt);font-family:var(--sans);margin:0;overflow-x:hidden;
+  overscroll-behavior-y:none;                        /* 遊戲中不要被下拉刷新打斷 */
   -webkit-font-smoothing:antialiased}
 button{font-family:inherit;color:inherit;border:0;background:none;cursor:pointer}
 button:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
 .num{font-family:var(--mono);font-variant-numeric:tabular-nums}
 
-.wrap{max-width:1640px;margin:0 auto;padding:18px 22px 26px}
+/* ---------- shell ---------- */
+/* 100vh 在手機瀏覽器是「網址列收起來時」的高度,操作列會被工具列蓋掉;
+   dvh 才是實際可視高度。舊瀏覽器讀不懂 dvh,會留在前一行的 vh。 */
+.wrap{height:100vh;height:100dvh;display:flex;flex-direction:column;gap:10px;
+  padding:max(12px,var(--sa-t)) max(16px,var(--sa-r)) max(14px,var(--sa-b)) max(16px,var(--sa-l))}
 
 /* ---------- top HUD ---------- */
-.hud{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;overflow:hidden;
+/* 用 flex 而不是三欄 grid:leadchip 是「有時候才出現」的第四個小孩,
+   固定三欄時它一出現就把時鐘擠到第二行。 */
+.hud{display:flex;align-items:center;gap:14px;overflow:hidden;
   background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px 14px}
-.brand{display:flex;align-items:center;gap:10px}
+.brand{flex:none;display:flex;align-items:center;gap:10px}
 .mark{width:28px;height:28px;border-radius:9px;background:var(--lime);display:grid;place-items:center;
   color:#0B1004;font-weight:900;font-size:17px;font-family:var(--mono)}
 .brand h1{font-size:14px;margin:0;letter-spacing:.5px;font-weight:900}
 .brand span{display:block;font-size:10px;color:var(--faint);letter-spacing:2.4px;font-family:var(--mono)}
-.clock{text-align:right}
+.clock{flex:none;text-align:right}
 .clock .t{font-family:var(--mono);font-size:26px;font-weight:700;line-height:1;letter-spacing:1px}
 .clock .l{font-size:10px;color:var(--faint);letter-spacing:2.6px;font-family:var(--mono)}
 .clock.warn .t{color:var(--down)}
 
-.players{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;min-width:0}
-.leadchip{display:none;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;
+.players{flex:1 1 auto;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;min-width:0}
+.leadchip{flex:none;display:none;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;
   color:var(--muted);white-space:nowrap}
 .leadchip b{font-size:11px}
 .leadchip i{width:7px;height:7px;border-radius:2px;display:inline-block}
 .pl{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:5px 9px;position:relative;overflow:hidden}
-.pl.me{border-color:rgba(163,230,53,.45)}
+.pl.me{border-color:rgba(145,213,0,.45)}
 .pl.dead{opacity:.34}
 .pl .row{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
-.pl .nm{font-size:10.5px;font-weight:700;display:flex;align-items:center;gap:5px;white-space:nowrap}
+.pl .nm{font-size:10.5px;font-weight:700;display:flex;align-items:center;gap:5px;white-space:nowrap;min-width:0}
+.pname{overflow:hidden;text-overflow:ellipsis}
 .dot{width:8px;height:8px;border-radius:3px;flex:none}
 .pshort{display:none;font-family:var(--mono)}
-.pl .val{font-family:var(--mono);font-size:13px;font-weight:700}
+.pl .val{font-family:var(--mono);font-size:13px;font-weight:700;flex:none}
 .bar{height:4px;border-radius:2px;background:#0C0F0B;margin-top:5px;overflow:hidden}
 .bar i{display:block;height:100%;border-radius:3px;transition:width .35s ease}
 .pl .sub{display:none}                                  /* 現金／場上／兵數看下方的操作列就好 */
 
 /* ---------- stage (map-first) ---------- */
-.wrap{max-width:none;height:100vh;display:flex;flex-direction:column;gap:10px;padding:12px 16px 14px}
 .stage{position:relative;flex:1;min-height:0;border:1px solid var(--line);border-radius:18px;overflow:hidden;
   background:radial-gradient(120% 92% at 50% 42%,#101711 0%,#090C08 72%)}
 svg.map{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
@@ -67,17 +99,18 @@ svg.map.drag{cursor:grabbing}
   border-radius:14px;backdrop-filter:blur(8px);display:flex;flex-direction:column;overflow:hidden;
   max-height:calc(100% - 152px);box-shadow:0 8px 26px rgba(0,0,0,.45)}
 .market{left:12px;width:208px}
-.troops{right:12px;width:246px;max-height:calc(100% - 160px)}
+.troops{right:12px;width:246px;max-height:calc(100% - 190px)}
 .troops h2{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .troops h2 b{font-family:var(--mono);font-size:11px;color:var(--lime);letter-spacing:.4px}
-.tlist{overflow-y:auto;padding:0 9px 9px;display:flex;flex-direction:column;gap:5px}
+.tlist{overflow-y:auto;padding:0 9px 9px;display:flex;flex-direction:column;gap:5px;
+  flex:1 1 auto;min-height:0}
 .trow{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:6px 7px;
   background:var(--panel-2);border:1px solid var(--line);border-radius:9px;transition:border-color .12s}
 .trow:hover{border-color:var(--lime)}
 .trow.on{border-color:#F2F7EE;background:rgba(242,247,238,.07)}
 .trow.fight{border-color:rgba(242,85,90,.75)}
-.trow.cash{border-color:rgba(163,230,53,.85);animation:rowp 1.1s ease-in-out infinite}
-@keyframes rowp{0%,100%{background:var(--panel-2)}50%{background:rgba(163,230,53,.13)}}
+.trow.cash{border-color:rgba(145,213,0,.85);animation:rowp 1.1s ease-in-out infinite}
+@keyframes rowp{0%,100%{background:var(--panel-2)}50%{background:rgba(145,213,0,.13)}}
 .tg{width:24px;height:24px;flex:none;border-radius:6px;display:grid;place-items:center;
   border:1px solid var(--line);background:#0C120C}
 .tg img{height:20px;width:auto;image-rendering:pixelated}
@@ -103,34 +136,51 @@ svg.map.drag{cursor:grabbing}
   border:1px solid var(--line);border-radius:20px;padding:6px 14px}
 .legend i{display:inline-block;width:7px;height:7px;border-radius:2px;margin-right:5px}
 
+.evtbar{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:6;display:none;
+  min-width:min(420px,84%);max-width:min(560px,90%);background:rgba(9,13,9,.95);
+  border:1px solid var(--line);border-radius:12px;padding:8px 13px 9px;box-shadow:0 8px 26px rgba(0,0,0,.5)}
+.evtbar.on{display:block}
+.evtbar .ehead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+  font-size:12px;line-height:1.35}
+.evtbar .eco{font-family:var(--mono);font-size:12px;font-weight:700;white-space:nowrap}
+.evtbar .esub{font-size:10.5px;color:var(--muted);margin-top:3px;line-height:1.4}
+.evtbar .ebar{height:3px;border-radius:2px;background:#0C0F0B;margin-top:7px;overflow:hidden}
+.evtbar .ebar i{display:block;height:100%}
+.toast{position:absolute;left:50%;top:64px;transform:translateX(-50%) translateY(-6px);z-index:6;
+  max-width:min(560px,86%);background:rgba(9,13,9,.94);border:1px solid var(--line);border-radius:12px;
+  padding:8px 14px;font-size:11.5px;line-height:1.45;color:var(--txt);opacity:0;pointer-events:none;
+  transition:opacity .22s ease, transform .22s ease;box-shadow:0 8px 26px rgba(0,0,0,.5)}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.warn{border-color:rgba(245,165,36,.55)}
+.toast.bad{border-color:rgba(242,85,90,.55)}
+
 /* ---------- dock (bottom of the map) ---------- */
-.dock{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);display:flex;align-items:stretch;gap:12px;
-  background:rgba(7,10,7,.9);border:1px solid var(--line);border-radius:16px;padding:10px 12px;
-  backdrop-filter:blur(8px);box-shadow:0 10px 34px rgba(0,0,0,.55);max-width:calc(100% - 24px)}
-.dockcol{display:flex;flex-direction:column;gap:7px}
+.dock{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);display:flex;align-items:stretch;
+  gap:var(--dock-gap);background:rgba(7,10,7,.9);border:1px solid var(--line);border-radius:16px;
+  padding:10px 12px;backdrop-filter:blur(8px);box-shadow:0 10px 34px rgba(0,0,0,.55);
+  max-width:calc(100% - 24px)}
+.dockcol{display:flex;flex-direction:column;gap:7px;min-width:0}
 .dockcol .lab{font-size:9.5px;font-family:var(--mono);letter-spacing:1.6px;color:var(--faint);text-transform:uppercase}
 .dockcol .lab b{font-family:var(--pixel);font-size:7.5px;letter-spacing:0;color:var(--lime);
-  border:1px solid rgba(163,230,53,.45);border-radius:5px;padding:2px 6px;margin-left:4px}
-.sep{width:1px;background:var(--line);margin:2px 0}
-.units{display:flex;gap:8px}
-.u{width:88px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:9px 6px 7px;
-  position:relative;overflow:hidden;text-align:center;transition:border-color .15s,transform .08s}
+  border:1px solid rgba(145,213,0,.45);border-radius:5px;padding:2px 6px;margin-left:4px}
+.sep{flex:none;width:1px;background:var(--line);margin:2px 0}
+.units{display:flex;gap:var(--unit-gap);overflow-x:auto;-webkit-overflow-scrolling:touch}
+.u{width:var(--u-w);flex:none;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;
+  padding:9px 6px 7px;position:relative;overflow:hidden;text-align:center;transition:border-color .15s,transform .08s}
 .u:hover:not(.off){border-color:var(--lime);transform:translateY(-1px)}
 .u.off{opacity:.38;cursor:not-allowed}
-.u .uimg{display:block;height:44px;width:auto;margin:2px auto 1px;image-rendering:pixelated}
+.u .uimg{display:block;height:var(--u-img);width:auto;margin:2px auto 1px;image-rendering:pixelated}
 .u .n{font-size:11px;font-weight:700;margin-top:1px;white-space:nowrap}
 .u .n .px{font-family:var(--mono);font-size:9px;font-weight:700;color:var(--lime);margin-left:2px}
 .u .c{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--txt);margin-top:5px;letter-spacing:.2px}
 .u.poor .c{color:var(--down)}
-.u .k{position:absolute;top:4px;left:5px;font-family:var(--mono);font-size:8px;color:var(--faint);
+.u .k{position:absolute;top:6px;left:5px;font-family:var(--mono);font-size:8px;color:var(--faint);
   border:1px solid var(--line);border-radius:4px;padding:0 3px}
 .u .cd{position:absolute;left:0;right:0;bottom:0;background:rgba(4,6,4,.72);
   display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px;
   font-family:var(--mono);font-size:13px;font-weight:700;color:var(--lime)}
-.u.fire{border-color:var(--lime);background:rgba(163,230,53,.22);transform:translateY(-3px)}
+.u.fire{border-color:var(--lime);background:rgba(145,213,0,.22);transform:translateY(-3px)}
 .u .cstrip{position:absolute;left:0;right:0;top:0;height:3px}
-
-.u .k{top:6px}
 .u.charging::after{content:"";position:absolute;left:0;bottom:0;height:3px;background:var(--lime);
   width:0;animation:chg .7s linear forwards}
 @keyframes chg{to{width:100%}}
@@ -145,8 +195,104 @@ svg.map.drag{cursor:grabbing}
 .u.rug{opacity:.32}
 .u.rug::before{content:"歸零";position:absolute;inset:auto 0 34%;text-align:center;
   font-family:var(--pixel);font-size:8px;color:#F2555A;letter-spacing:1px}
+.u.evt{animation:evtp 1s ease-in-out infinite}
+@keyframes evtp{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,0)}50%{box-shadow:0 0 0 2px currentColor}}
 
-/* svg text */
+/* 大招：刻意跟召喚卡長得不一樣——一顆帶文字說明的長按鈕，
+   左邊那條 .ucd 是冷卻條（從滿到空），可以放的時候整顆會呼吸。 */
+.ultcol{flex:none;max-width:calc(var(--ult-w) + 14px)}
+.ultbtn{position:relative;overflow:hidden;width:var(--ult-w);text-align:left;display:flex;flex-direction:column;gap:3px;
+  padding:8px 10px 9px;border-radius:12px;border:1px solid rgba(145,213,0,.5);
+  background:linear-gradient(rgba(145,213,0,.13),rgba(145,213,0,.03));transition:border-color .15s,transform .08s}
+.ultbtn:hover:not(.off){border-color:var(--lime);transform:translateY(-1px)}
+.ultbtn.off{opacity:.4;cursor:not-allowed}
+.ultbtn.fire{border-color:var(--lime);background:rgba(145,213,0,.24);transform:translateY(-3px)}
+.ultbtn .ucd{position:absolute;left:0;top:0;bottom:0;width:0;background:rgba(145,213,0,.16);
+  border-right:1px solid rgba(145,213,0,.45);pointer-events:none;transition:width .2s linear}
+.ultbtn .uhead{position:relative;display:flex;align-items:center;gap:6px}
+.ultbtn .uhead img{height:26px;width:26px;image-rendering:pixelated;flex:none}
+.ultbtn .uhead b{font-size:13px;font-weight:900;color:#F6F6F6;white-space:nowrap}
+.ultbtn .ug{font-style:normal;margin-left:auto;white-space:nowrap;font-family:var(--mono);font-size:8px;font-weight:700;
+  letter-spacing:.6px;color:#0B1004;background:var(--lime);border-radius:4px;padding:1px 5px}
+.ultbtn .ud{font-size:10px;line-height:1.45;color:var(--muted)}
+.ultbtn .us{font-family:var(--mono);font-size:9px;color:var(--lime)}
+.ultbtn.off .us{color:var(--faint)}
+.ultbtn.ready{animation:ultp 1.6s ease-in-out infinite}
+@keyframes ultp{0%,100%{box-shadow:0 0 0 0 rgba(145,213,0,0);border-color:rgba(145,213,0,.5)}
+  50%{box-shadow:0 0 0 2px rgba(145,213,0,.4);border-color:var(--lime)}}
+
+/* 結算列（#actsCol）平常掛在右側「我的部隊」面板底下——賣掉誰跟賣多少在同一塊，
+   眼睛不用在畫面兩端來回跑。面板被收起來的窄畫面才會退回操作列（見 Dock.jsx）。 */
+.actsslot:empty{display:none}
+.troops #actsCol{flex:none;padding:8px 9px 9px;border-top:1px solid var(--line);
+  background:rgba(255,255,255,.02)}
+.troops #actsCol .lab{font-size:8px;letter-spacing:1px;color:var(--faint);display:block;margin-bottom:5px}
+.troops #actsCol .acts{gap:6px;flex-wrap:wrap;overflow:visible}
+.troops #actsCol .a{width:auto;flex:1 1 0;min-width:0;padding:6px 8px}
+.troops #actsCol .a .t{font-size:10.5px}
+.troops #actsCol .a .d{font-size:8.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 三顆並排在 246px 寬的面板裡會擠到看不懂，產出切換自己佔一排 */
+.troops #actsCol .a#autoBtn{flex-basis:100%}
+
+.acts{display:flex;gap:var(--unit-gap);overflow-x:auto;-webkit-overflow-scrolling:touch}
+.a{width:var(--a-w);flex:none;background:var(--panel-2);border:1px solid var(--line);border-radius:11px;
+  padding:7px 9px;text-align:left;display:flex;flex-direction:column;gap:1px;transition:border-color .15s}
+.a:hover:not(.off){border-color:var(--lime)}
+.a.off{opacity:.38;cursor:not-allowed}
+.a .t{font-size:11px;font-weight:700}
+.a .d{font-size:9px;color:var(--faint);line-height:1.3}
+.a .p{font-family:var(--mono);font-size:9.5px;color:var(--lime-dim);margin-top:1px}
+
+.cashcol{flex:none;min-width:var(--cash-w)}
+.cash{font-family:var(--mono);font-size:23px;font-weight:700;color:var(--lime);line-height:1;margin-top:1px}
+.ticker{display:flex;flex-direction:column;gap:2px;margin-top:7px}
+.tk{display:grid;grid-template-columns:34px auto auto auto 1fr;gap:6px;align-items:center;
+  font-family:var(--mono);font-size:9.5px;color:var(--muted)}
+.tk .tkh{text-align:right;font-weight:700}
+.tk b{font-weight:700}
+.tk .tkp{color:var(--txt)}
+.tk.hot{animation:tkhot 1s ease-in-out infinite}
+/* 簡化版只有一種幣，那支幣就是整個市場，所以給它大字價格＋一整條走勢圖；
+   完整版三種幣要能並排比較，維持上面那種一行一支的緊湊排法。 */
+.prow{display:flex;align-items:baseline;gap:7px;font-family:var(--mono);line-height:1}
+.prow .pv{font-size:21px;font-weight:700;color:var(--txt)}
+.prow .pc{font-size:12.5px;font-weight:700}
+.spark{display:block;width:100%;height:26px}
+.tk .spark{width:44px;height:13px;flex:none}
+.phold{font-family:var(--mono);font-size:9.5px;color:var(--muted)}
+.phold b{font-weight:700}
+.ticker.hot .prow .pv{animation:tkhot 1s ease-in-out infinite}
+@keyframes tkhot{0%,100%{opacity:1}50%{opacity:.45}}
+
+.target{position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%);white-space:nowrap;
+  font-size:10px;font-family:var(--mono);color:var(--muted);background:rgba(7,10,7,.9);
+  border:1px solid var(--line);border-radius:16px;padding:4px 12px;max-width:100%;overflow:hidden;
+  text-overflow:ellipsis}
+.target b{color:var(--lime)}
+/* 手機／平板用的部隊條（桌機用右上的部隊面板，這條不顯示） */
+.tstrip{display:none}
+.tchip{flex:none;display:flex;align-items:center;gap:5px;padding:3px 6px 3px 3px;
+  background:var(--panel-2);border:1px solid var(--line);border-radius:9px;min-width:0}
+.tchip img{height:22px;width:auto;image-rendering:pixelated;flex:none}
+.tchip .cw{display:flex;flex-direction:column;gap:2px;min-width:34px}
+.tchip .cp{font-family:var(--mono);font-size:9.5px;font-weight:700;line-height:1}
+.tchip .cb{height:3px;border-radius:2px;background:#0C0F0B;overflow:hidden}
+.tchip .cb i{display:block;height:100%}
+.tchip.on{border-color:#F2F7EE;background:rgba(242,247,238,.08)}
+.tchip.fight{border-color:rgba(242,85,90,.8)}
+.tchip.cash{border-color:rgba(145,213,0,.9);animation:rowp 1.1s ease-in-out infinite}
+.tempty2{font-size:9.5px;color:var(--faint);padding:4px 2px}
+/* 破產提示壓在部隊條上面（z-index），它是少數狀態，出現時就該蓋過其他東西 */
+.helper{position:absolute;left:0;right:0;bottom:calc(100% + 9px);display:none;z-index:2;
+  background:rgba(9,13,9,.96);border:1px solid rgba(245,165,36,.55);border-radius:12px;
+  padding:9px 14px;font-size:12px;line-height:1.55;color:var(--muted);
+  box-shadow:0 8px 26px rgba(0,0,0,.5)}
+.helper.on{display:block}
+.helper b{color:var(--txt)}
+.helper .hb{height:3px;border-radius:2px;background:#0C0F0B;margin-top:7px;overflow:hidden}
+.helper .hb i{display:block;height:100%;background:var(--mid)}
+
+/* ---------- svg text ---------- */
 .unitglyph{font-family:var(--sans);font-size:6.5px;font-weight:900;text-anchor:middle}
 .plmark{font-family:var(--mono);font-size:7px;font-weight:700;text-anchor:middle}
 .plbig{font-family:var(--mono);font-size:8.5px;font-weight:700;text-anchor:middle}
@@ -164,265 +310,58 @@ svg.map.drag{cursor:grabbing}
 @keyframes mp{0%{opacity:.55;transform:scale(.7)}100%{opacity:0;transform:scale(1.5)}}
 .hotzone{animation:hz 1.1s ease-in-out infinite}
 @keyframes hz{0%,100%{opacity:.28}50%{opacity:.9}}
-.acts{display:flex;gap:7px}
-.a{width:104px;background:var(--panel-2);border:1px solid var(--line);border-radius:11px;padding:7px 9px;
-  text-align:left;display:flex;flex-direction:column;gap:1px;transition:border-color .15s}
-.a:hover:not(.off){border-color:var(--lime)}
-.a.off{opacity:.38;cursor:not-allowed}
-.a .t{font-size:11px;font-weight:700}
-.a .d{font-size:9px;color:var(--faint);line-height:1.3}
-.a .p{font-family:var(--mono);font-size:9.5px;color:var(--lime-dim);margin-top:1px}
-/* 手機用的部隊列（桌機用右上面板，這條不顯示） */
-.tstrip{display:none}
-.helper{position:absolute;left:0;right:0;bottom:calc(100% + 9px);display:none;
-  background:rgba(9,13,9,.96);border:1px solid rgba(245,165,36,.55);border-radius:12px;
-  padding:9px 14px;font-size:12px;line-height:1.55;color:var(--muted);
-  box-shadow:0 8px 26px rgba(0,0,0,.5)}
-.helper.on{display:block}
-.helper b{color:var(--txt)}
-.helper .hb{height:3px;border-radius:2px;background:#0C0F0B;margin-top:7px;overflow:hidden}
-.helper .hb i{display:block;height:100%;background:var(--mid)}
-.tchip{flex:none;display:flex;align-items:center;gap:5px;padding:3px 6px 3px 3px;
-  background:var(--panel-2);border:1px solid var(--line);border-radius:9px;min-width:0}
-.tchip img{height:22px;width:auto;image-rendering:pixelated;flex:none}
-.tchip .cw{display:flex;flex-direction:column;gap:2px;min-width:34px}
-.tchip .cp{font-family:var(--mono);font-size:9.5px;font-weight:700;line-height:1}
-.tchip .cb{height:3px;border-radius:2px;background:#0C0F0B;overflow:hidden}
-.tchip .cb i{display:block;height:100%}
-.tchip.on{border-color:#F2F7EE;background:rgba(242,247,238,.08)}
-.tchip.fight{border-color:rgba(242,85,90,.8)}
-.tchip.cash{border-color:rgba(163,230,53,.9);animation:rowp 1.1s ease-in-out infinite}
-.tempty2{font-size:9.5px;color:var(--faint);padding:4px 2px}
-.cashcol{min-width:172px}
-.cash{font-family:var(--mono);font-size:23px;font-weight:700;color:var(--lime);line-height:1;margin-top:1px}
-.ticker{display:flex;flex-direction:column;gap:2px;margin-top:7px}
-.tk{display:grid;grid-template-columns:34px auto auto 1fr;gap:6px;align-items:baseline;
-  font-family:var(--mono);font-size:9.5px;color:var(--muted)}
-.tk .tkh{text-align:right;font-weight:700}
-.tk b{font-weight:700}
-.tk .tkp{color:var(--txt)}
-.tk.hot{animation:tkhot 1s ease-in-out infinite}
-@keyframes tkhot{0%,100%{opacity:1}50%{opacity:.45}}
-.evtbar{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:6;display:none;
-  min-width:min(420px,84%);max-width:min(560px,90%);background:rgba(9,13,9,.95);
-  border:1px solid var(--line);border-radius:12px;padding:8px 13px 9px;box-shadow:0 8px 26px rgba(0,0,0,.5)}
-.evtbar.on{display:block}
-.evtbar .ehead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
-  font-size:12px;line-height:1.35}
-.evtbar .eco{font-family:var(--mono);font-size:12px;font-weight:700;white-space:nowrap}
-.evtbar .esub{font-size:10.5px;color:var(--muted);margin-top:3px;line-height:1.4}
-.evtbar .ebar{height:3px;border-radius:2px;background:#0C0F0B;margin-top:7px;overflow:hidden}
-.evtbar .ebar i{display:block;height:100%}
-.u.evt{animation:evtp 1s ease-in-out infinite}
-@keyframes evtp{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,0)}50%{box-shadow:0 0 0 2px currentColor}}
-.toast{position:absolute;left:50%;top:64px;transform:translateX(-50%) translateY(-6px);z-index:6;
-  max-width:min(560px,86%);background:rgba(9,13,9,.94);border:1px solid var(--line);border-radius:12px;
-  padding:8px 14px;font-size:11.5px;line-height:1.45;color:var(--txt);opacity:0;pointer-events:none;
-  transition:opacity .22s ease, transform .22s ease;box-shadow:0 8px 26px rgba(0,0,0,.5)}
-.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
-.toast.warn{border-color:rgba(245,165,36,.55)}
-.toast.bad{border-color:rgba(242,85,90,.55)}
-.target{position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%);white-space:nowrap;
-  font-size:10px;font-family:var(--mono);color:var(--muted);background:rgba(7,10,7,.9);
-  border:1px solid var(--line);border-radius:16px;padding:4px 12px}
-.target b{color:var(--lime)}
 
-@media (max-width:1240px){
-  .ovl{width:230px}
-  .u{width:68px}.a{width:92px}
-}
-/* ---------- mobile ---------- */
-@media (max-width:900px){
-  .wrap{padding:6px 6px 8px;gap:6px}
-  .hud{grid-template-columns:minmax(0,1fr);gap:6px;padding:6px 8px;border-radius:12px}
-  .brand{display:none}
-  .clock{display:block;text-align:center}
-  .clock .t{font-size:20px}.clock .l{font-size:7px;letter-spacing:1.2px}
-  .players{gap:4px}
-  .pl{padding:4px 6px;border-radius:9px;min-width:0}
-  .pl .row{gap:4px}
-  .pl .nm{font-size:9px;gap:3px;max-width:38px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .zoomctl .zbtn{display:none}
-  .pl .val{font-size:10.5px}
-  .pl .bar{height:4px;margin-top:5px}
-  .pl .sub{display:none}
-  .stage{border-radius:12px}
-  .troops{display:none}
-  .legend{display:none}
-  .zoomctl{top:8px;right:8px;bottom:auto;flex-direction:row;gap:5px}
-  .zoomctl button{width:30px;height:30px;font-size:13px}
-  .zoomctl .zbtn{display:none}                       /* 手機用雙指縮放就好 */
-  .evtbar{top:8px;min-width:0;max-width:calc(100% - 156px);left:8px;transform:none;padding:6px 10px 7px}
-  .evtbar .ehead{font-size:11px}.evtbar .eco{font-size:11px}.evtbar .esub{font-size:9.5px}
-  .toast{top:74px;font-size:10.5px;padding:6px 11px;max-width:calc(100% - 156px);left:8px;transform:none;
-    margin-right:156px}
-  .toast.on{transform:none}
-  .dock{left:6px;right:6px;bottom:6px;transform:none;max-width:none;flex-direction:column;
-    gap:6px;padding:7px 8px;border-radius:13px}
-  .dock .target{display:none}
-  .tstrip{display:flex;gap:5px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:1px}
-  .sep{display:none}
-  .dockcol{gap:5px}
-  .dockcol .lab{display:none}
-  .cashcol{min-width:0;flex-direction:row;align-items:center;gap:10px}
-  .tk .tkh{display:none}
-  .cash{font-size:17px;margin:0}
-  .ticker{flex-direction:row;gap:9px;margin:0;flex:1;overflow-x:auto}
-  .tk{display:flex;gap:4px;font-size:9px}
-  .units,.acts{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px}
-  .u{width:60px;flex:none;padding:5px 3px 4px}
-  .u .uimg{height:30px}
-  .u .n{font-size:9px}.u .c{font-size:11px;margin-top:2px}
-  .u .pw{margin-top:2px;gap:1.5px}.u .pw i{width:6px;height:2.5px}.u .pw span{font-size:7px}
-  .u .k{font-size:7px;top:3px;left:3px}.u .cc{font-size:6.5px;top:3px;right:3px}
-  .u .chg{display:none}
-  .u .n .px{font-size:8px}
-  .a{width:auto;flex:1;min-width:76px;padding:5px 7px;gap:0}
-  .a .t{font-size:9.5px}.a .d{display:none}.a .p{font-size:9px}
-  .panel{padding:18px 15px 15px;border-radius:16px}
-  .panel h3{font-size:18px}.panel p.lead{font-size:11.5px}
-  .steps{grid-template-columns:1fr;gap:6px;margin:10px 0 12px}
-  .st{padding:8px 10px;display:flex;align-items:baseline;gap:8px}
-  .st b{margin:0}.st span{font-size:12.5px}.st i{margin:0 0 0 4px}
-  .classes{grid-template-columns:1fr;gap:7px}
-  .cls{padding:10px 12px}.cls p{min-height:0;font-size:11px;margin-bottom:7px}
-  .cls .stat{display:none}
-}
-@media (max-width:620px){
-  .pname{display:none}
-  .pshort{display:inline}
-  .pl .nm{max-width:none}
-  .pl{padding:4px 5px}
-  .players{gap:3px}
-  .u{width:56px}.u .g{font-size:14px}.u .n{font-size:9px}
-  .a{width:86px}
-}
-/* ---------- 手機橫式：畫面很矮，介面要壓成一條 ---------- */
-@media (orientation:landscape) and (max-height:560px){
-  .wrap{padding:5px 6px 6px;gap:5px}
-  .hud{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:4px 8px;border-radius:10px}
-  .brand{display:none}
-  .players{gap:4px}
-  .pl{padding:3px 6px;border-radius:8px}
-  .pl .nm{font-size:8.5px;max-width:none}.pl .val{font-size:10px}
-  .pl .bar{height:3px;margin-top:3px}.pl .sub{display:none}
-  .clock{display:block;text-align:right}
-  .clock .t{font-size:19px}.clock .l{display:none}
-  .stage{border-radius:10px}
-  .troops{display:none}
-  .dock{flex-direction:row;align-items:stretch;gap:9px;padding:6px 8px;left:6px;right:6px;bottom:6px;
-    border-radius:12px}
-  .dock .target{display:none}
-  .sep{display:block;width:1px;margin:2px 0}
-  .dockcol{gap:3px}
-  .dockcol .lab{display:block;font-size:7.5px;letter-spacing:.8px}
-  .cashcol{min-width:110px;flex-direction:column;align-items:flex-start;gap:0}
-  .cash{font-size:15px;margin:0}
-  .ticker{flex-direction:column;gap:1px;margin-top:3px;overflow:visible}
-  .tk{display:grid;grid-template-columns:30px auto auto;gap:4px;font-size:8px}
-  .tk .tkh{display:none}
-  .units,.acts{overflow-x:auto;-webkit-overflow-scrolling:touch}
-  .u{width:54px;flex:none;padding:4px 2px 3px;border-radius:9px}
-  .u .uimg{height:26px}
-  .u .n{font-size:8.5px}.u .c{font-size:10.5px;margin-top:2px}
-  .u .pw{margin-top:2px;gap:1.5px}.u .pw i{width:5px;height:2.5px}.u .pw span{font-size:6.5px}
-  .u .k,.u .cc{font-size:6.5px}.u .n .px{font-size:7.5px}
-  .u .chg{display:none}
-  .u .k{top:2px;left:3px}.u .cc{top:2px;right:3px}
-  .a{width:auto;flex:none;min-width:70px;padding:4px 7px}
-  .a .t{font-size:9px}.a .d{display:none}.a .p{font-size:8.5px}
-  .tstrip{position:absolute;left:0;right:0;bottom:calc(100% + 6px);display:flex;gap:4px}
-  .tchip{padding:2px 5px 2px 2px;border-radius:8px}
-  .tchip img{height:18px}.tchip .cp{font-size:8.5px}.tchip .cw{min-width:28px}
-  .tempty2{display:none}
-  .zoomctl{top:50%;bottom:auto;right:6px;transform:translateY(-60%);flex-direction:column;gap:4px}
-  .zoomctl button{width:28px;height:28px;font-size:12px}
-  .zoomctl .zbtn{display:none}
-  .players .pl:not(.me){display:none}                /* 橫式只留自己 */
-  .players{grid-template-columns:minmax(0,1fr)}
-  .leadchip{display:flex}
-  .hud{grid-template-columns:minmax(0,180px) minmax(0,1fr) auto}
-  .evtbar{top:6px;left:6px;transform:none;min-width:0;max-width:calc(100% - 46px);padding:5px 9px 6px}
-  .evtbar .ehead{font-size:10.5px}.evtbar .eco{font-size:10.5px}.evtbar .esub{font-size:9px}
-  .evtbar .ebar{margin-top:4px}
-  .toast{top:6px;left:6px;transform:none;max-width:calc(100% - 46px);margin:0;font-size:10px;padding:5px 9px}
-  .toast.on{transform:none}
-  .panel{padding:12px 14px 12px;max-height:92vh;overflow-y:auto}
-  .panel h3{font-size:16px;margin-bottom:2px}
-  .panel .eyebrow{font-size:9px;margin-bottom:3px}
-  .panel p.lead{font-size:10.5px;margin-bottom:10px}
-  .steps{grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0 9px}
-  .st{padding:6px 8px}.st b{width:16px;height:16px;font-size:9px;margin-bottom:3px}
-  .st span{font-size:11px}.st i{font-size:9.5px}
-  .classes{grid-template-columns:repeat(4,1fr);gap:6px}
-  .cls{padding:8px 9px}.cls h4{font-size:13px}.cls p{font-size:9.5px;margin-bottom:5px}
-  .cls .cg{font-size:8px;margin-bottom:4px}
-  .cls .roster span{font-size:8.5px;padding:1px 4px}
-  .cls .stat{display:none}
-}
-
-
-/* ---------- 大螢幕：介面跟著放大，才不會小到失衡 ---------- */
-@media (min-width:1700px){
-  .u{width:92px;border-radius:13px}
-  .u .uimg{height:40px}
-  .u .n{font-size:12px}.u .c{font-size:11px}.u .k{font-size:9px}.u .cc{font-size:9px}.u .chg{font-size:9px}
-  .a{width:126px;padding:9px 11px}
-  .a .t{font-size:12.5px}.a .d{font-size:10.5px}.a .p{font-size:11px}
-  .cashcol{min-width:142px}
-  .cash{font-size:28px}
-  .tk{font-size:11px;grid-template-columns:38px auto auto 1fr}
-  .dockcol .lab{font-size:11px}
-  .target{font-size:12px;padding:5px 14px}
-  .dock{gap:16px;padding:12px 15px;border-radius:18px}
-  .troops{width:296px}
-  .tn{font-size:12.5px}.tn em{font-size:10px}.tpl{font-size:11.5px}.tst{font-size:10.5px}
-  .tg{width:28px;height:28px}.tg img{height:23px}.tset{font-size:11.5px}
-  .ovl h2{font-size:11px}.troops h2 b{font-size:13px}
-  .pl .nm{font-size:13px}.pl .val{font-size:16px}.pl .sub{font-size:10.5px}
-  .clock .t{font-size:40px}.clock .l{font-size:11px}
-  .brand h1{font-size:18px}
-  .toast{font-size:13px;padding:10px 18px;border-radius:14px}
-}
-@media (min-width:2300px){
-  .u{width:110px}.u .uimg{height:48px}.u .n{font-size:14px}.u .c{font-size:12.5px}
-  .a{width:150px}.a .t{font-size:14px}.a .d{font-size:12px}.a .p{font-size:12.5px}
-  .cash{font-size:34px}.cashcol{min-width:170px}.tk{font-size:12.5px}
-  .troops{width:340px}.tn{font-size:14px}.tst{font-size:11.5px}
-  .tg{width:32px;height:32px}.tg img{height:27px}
-  .pl .val{font-size:19px}.pl .nm{font-size:15px}
-  .clock .t{font-size:48px}
-  .toast{font-size:15px}
-  .target{font-size:13.5px}
-}
-
-/* ---------- overlays ---------- */
-.ov{position:fixed;inset:0;background:rgba(4,6,4,.9);display:flex;padding:24px;z-index:20;
+/* ---------- overlay screens (entry / select / lobby / result) ---------- */
+.ov{position:fixed;inset:0;background:rgba(4,6,4,.9);display:flex;z-index:20;
+  padding:max(24px,var(--sa-t)) max(24px,var(--sa-r)) max(24px,var(--sa-b)) max(24px,var(--sa-l));
   overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .ov.hide{display:none}
 .panel{max-width:880px;width:100%;margin:auto;flex:0 0 auto;background:var(--panel);border:1px solid var(--line);border-radius:20px;
-  padding:26px 26px 22px;box-shadow:var(--shadow)}
+  padding:clamp(15px,3.4vw,26px) clamp(15px,3.4vw,26px) clamp(14px,3vw,22px);box-shadow:var(--shadow)}
+/* 結算面板本來就會很長，限制高度自己捲；用 dvh 是為了手機工具列 */
+.panel.scrolly{max-height:88vh;max-height:88dvh;overflow-y:auto;overscroll-behavior:contain}
 .panel .eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:3px;color:var(--lime);margin-bottom:6px}
-.panel h3{margin:0 0 4px;font-size:24px;font-weight:900;letter-spacing:.5px}
-.panel p.lead{margin:0 0 18px;color:var(--muted);font-size:12.5px;line-height:1.6}
-.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0 16px}
+.panel h3{margin:0 0 4px;font-size:clamp(17px,4.2vw,24px);font-weight:900;letter-spacing:.5px}
+.panel p.lead{margin:0 0 18px;color:var(--muted);font-size:clamp(11.5px,2.6vw,12.5px);line-height:1.6}
+/* auto-fit 讓步驟卡／身份卡自己決定要排幾欄,不用一堆斷點硬切,
+   min() 那層是為了容器比 minmax 下限還窄時不要溢出。 */
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(150px,100%),1fr));gap:10px;margin:14px 0 16px}
 .st{background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px 13px}
 .st b{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:6px;
   background:var(--lime);color:#0B1004;font-family:var(--mono);font-size:11px;margin-bottom:7px}
 .st span{display:block;font-size:14px;font-weight:900}
 .st i{display:block;font-style:normal;font-size:11px;color:var(--muted);margin-top:2px}
 .pick{font-family:var(--mono);font-size:10px;letter-spacing:2.4px;color:var(--faint);margin-bottom:8px}
-.classes{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+.classes{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(190px,100%),1fr));gap:9px}
 .cls{background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:13px 14px;text-align:left;
-  transition:border-color .15s,transform .1s}
+  display:flex;flex-direction:column;transition:border-color .15s,transform .1s}
+/* 標籤那排往下推,讓四張卡的「大招」那一條對齊在同一個高度——描述長度不一樣,
+   不對齊的話會看成「這張卡比較重要」。 */
+.cls .roster{margin-bottom:auto;display:flex;flex-wrap:wrap;gap:4px}
 .cls:hover{border-color:var(--lime);transform:translateY(-2px)}
-.cls .cg{font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--lime);margin-bottom:8px}
-.cls h4{margin:0 0 6px;font-size:16px;font-weight:900}
-.cls p{margin:0 0 10px;font-size:11.5px;color:var(--muted);line-height:1.5}
-.cls .roster{display:flex;flex-wrap:wrap;gap:4px}
+.cls .cg{font-family:var(--mono);font-size:9.5px;letter-spacing:2px;color:var(--lime);margin-bottom:3px}
+.cls h4{margin:0;font-size:16px;font-weight:900}
+.cls p{margin:0 0 8px;font-size:11.5px;color:var(--muted);line-height:1.45;min-height:0}
 .cls .roster span{font-size:10px;font-family:var(--mono);border:1px solid var(--line);border-radius:5px;
   padding:2px 6px;color:var(--muted)}
-.cls .stat{display:flex;gap:10px;margin-top:11px;font-family:var(--mono);font-size:9.5px;color:var(--faint)}
+.cls .stat{display:flex;flex-wrap:wrap;gap:10px;margin-top:11px;font-family:var(--mono);font-size:9.5px;color:var(--faint)}
+.chead{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.cspr{height:clamp(34px,8vw,46px);width:clamp(34px,8vw,46px);image-rendering:pixelated;flex:none}
+.cwho{min-width:0}
+.ultrow{margin-top:9px;padding:6px 8px;border-radius:8px;border:1px solid rgba(145,213,0,.32);
+  background:rgba(145,213,0,.07);display:flex;flex-direction:column;gap:2px}
+.ultrow b{font-size:11px;color:var(--lime)}
+.ultrow i{font-style:normal;font-size:10px;color:var(--muted);line-height:1.4}
+.iphero{display:flex;align-items:center;gap:clamp(10px,2.4vw,18px);margin-bottom:clamp(10px,2vw,16px)}
+.iphero .ipcat{height:clamp(84px,19vw,172px);width:auto;image-rendering:pixelated;flex:none}
+.ipword{font-size:clamp(14px,4.4vw,23px);font-weight:900;color:#F6F6F6;line-height:1.35;letter-spacing:.5px}
+.ipword span{display:block;font-size:clamp(7px,1.8vw,10px);font-weight:700;color:#B2B2B2;
+  letter-spacing:3px;margin-top:4px}
+.ipres{display:flex;align-items:flex-start;gap:clamp(10px,2.2vw,16px);margin-bottom:10px}
+.ipres img{height:clamp(66px,13vw,112px);width:auto;image-rendering:pixelated;flex:none}
+.reshead{min-width:0}
+.reshead h3{margin:2px 0 4px}
+.reshead p.lead{margin:0}
 .result{display:grid;gap:8px;margin:14px 0 12px}
 .ressum{font-size:11.5px;color:var(--muted);font-family:var(--sans);line-height:1.6;
   border-top:1px solid var(--line);padding-top:11px}
@@ -435,21 +374,24 @@ svg.map.drag{cursor:grabbing}
 .lsn b{display:block;font-size:12.5px;margin-bottom:4px}
 .lsn p{margin:0;font-size:11.5px;color:var(--muted);line-height:1.65}
 .lsn p b{display:inline;color:var(--txt);font-size:11.5px}
-.rrow{display:flex;justify-content:space-between;align-items:center;background:var(--panel-2);
+.rrow{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--panel-2);
   border:1px solid var(--line);border-radius:10px;padding:9px 13px;font-size:12.5px}
 .rrow.win{border-color:var(--lime);background:var(--lime-soft)}
-.rrow .v{font-family:var(--mono);font-weight:700}
-.btn{background:var(--lime);color:#0B1004;font-weight:900;font-size:13px;border-radius:10px;padding:11px 22px}
+.rrow .v{font-family:var(--mono);font-weight:700;flex:none}
+/* 按鈕在窄螢幕要撐得夠大好按（44px 是手指的安全尺寸） */
+.btn{background:var(--lime);color:#0B1004;font-weight:900;font-size:13px;border-radius:10px;
+  padding:11px 22px;min-height:44px}
 .btn.ghost{background:none;border:1px solid var(--line);color:var(--txt);font-weight:700}
-.foot{display:flex;gap:10px;justify-content:flex-end}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.foot{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end}
 .hint{font-size:10.5px;color:var(--faint);font-family:var(--mono);letter-spacing:.3px}
 
 /* ---------- 房號配對 ---------- */
 .roomcode{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 13px;
   background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:9px 13px}
 .roomcode-label{font-family:var(--mono);font-size:9.5px;letter-spacing:2.4px;color:var(--faint)}
-.roomcode-num{font-family:var(--mono);font-size:26px;font-weight:700;letter-spacing:6px;line-height:1;
-  color:var(--lime);padding:0}
+.roomcode-num{font-family:var(--mono);font-size:clamp(21px,5.4vw,26px);font-weight:700;letter-spacing:6px;
+  line-height:1;color:var(--lime);padding:0}
 .roomcode-num:hover{text-decoration:underline}
 .roomcode-hint{font-size:10.5px;color:var(--muted);margin-left:auto}
 .entry-err{background:rgba(242,85,90,.12);border:1px solid var(--down);color:var(--down);
@@ -458,32 +400,236 @@ svg.map.drag{cursor:grabbing}
   background:var(--lime);border-radius:4px;padding:1px 5px;vertical-align:1px}
 .entry-busy{font-family:var(--mono);font-size:10.5px;letter-spacing:2px;color:var(--lime);
   text-align:center;margin-bottom:11px}
-/* 進場的模式選擇：兩張並排的卡，選中的那張亮綠邊。 */
-.modepick{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 10px}
+/* 進場的模式選擇：兩張並排的卡，選中的那張亮綠邊。窄螢幕自己疊成一欄。 */
+.modepick{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(180px,100%),1fr));gap:8px;margin:12px 0 10px}
 .mp{display:flex;flex-direction:column;gap:3px;text-align:left;padding:10px 11px;cursor:pointer;
   background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:10px;color:var(--muted)}
 .mp:hover{border-color:var(--faint)}
 .mp b{font-size:13px;color:var(--txt)}
 .mp span{font-size:10.5px;line-height:1.45}
-.mp.on{border-color:var(--lime);background:rgba(163,230,53,.10)}
+.mp.on{border-color:var(--lime);background:rgba(145,213,0,.10)}
 .mp.on b{color:var(--lime)}
-@media (max-width:520px){.modepick{grid-template-columns:1fr}}
 .entry-main{width:100%;padding:13px}
 .entry-or{font-family:var(--mono);font-size:9.5px;letter-spacing:2.4px;color:var(--faint);
   text-align:center;margin:15px 0 9px}
 .entry-join{display:flex;gap:8px}
 .entry-code{flex:1;min-width:0;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;
-  color:var(--txt);font-family:var(--mono);font-size:22px;font-weight:700;letter-spacing:8px;
+  color:var(--txt);font-family:var(--mono);font-size:clamp(18px,5vw,22px);font-weight:700;letter-spacing:8px;
   text-align:center;padding:8px 10px 8px 18px}
 .entry-code:focus{outline:none;border-color:var(--lime)}
 .entry-code::placeholder{color:var(--faint)}
-.btn:disabled{opacity:.45;cursor:not-allowed}
 
-@media (max-width:1120px){
-  .main{grid-template-columns:1fr}
-  .bar-wrap{grid-template-columns:1fr}
-  .classes{grid-template-columns:repeat(2,1fr)}
+
+/* ============================================================
+   RESPONSIVE —— 以下全部是斷點,順序:大→小,橫式手機放最後才蓋得贏。
+   斷點只負責「版型要不要換」(面板收不收、操作列橫排還是直排),
+   純粹的大小縮放交給上面的 clamp。
+   ============================================================ */
+
+/* ---------- 平板／小筆電：右側部隊面板收起來，改用操作列上方的部隊條 ---------- */
+@media (max-width:1240px){
+  .ovl{width:230px}
 }
-@media (max-width:560px){
-  .classes{grid-template-columns:1fr}
+@media (max-width:1120px){
+  /* 這個寬度下,地圖被左右兩塊浮層夾住會太窄,而且縮放鈕會壓到操作列右端。
+     部隊改用操作列上方那條 chip,右側整個讓給地圖。 */
+  .troops{display:none}
+  .tstrip{position:absolute;left:0;right:0;bottom:calc(100% + 8px);display:flex;gap:5px;
+    overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:1px}
+  .dock .target{bottom:calc(100% + 44px)}
+  .zoomctl{top:50%;bottom:auto;transform:translateY(-50%)}
+  .legend{display:none}
+}
+
+/* ---------- 手機直式 ---------- */
+@media (max-width:900px){
+  .wrap{gap:6px;padding:max(6px,var(--sa-t)) max(6px,var(--sa-r)) max(8px,var(--sa-b)) max(6px,var(--sa-l))}
+  .hud{flex-wrap:wrap;gap:6px;padding:6px 8px;border-radius:12px}
+  .brand{display:none}
+  .clock{flex:none;text-align:center;margin-inline:auto}
+  .clock .t{font-size:20px}.clock .l{font-size:7px;letter-spacing:1.2px}
+  .players{flex:1 1 100%;gap:4px}
+  .pl{padding:4px 6px;border-radius:9px;min-width:0}
+  .pl .row{gap:4px}
+  .pl .nm{font-size:9px;gap:3px;max-width:38px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pl .val{font-size:10.5px}
+  .pl .bar{height:4px;margin-top:5px}
+  .stage{border-radius:12px}
+  .zoomctl{top:8px;right:8px;bottom:auto;transform:none;flex-direction:row;gap:5px}
+  .zoomctl button{width:36px;height:36px;font-size:13px}
+  .zoomctl .zbtn{display:none}                       /* 手機用雙指縮放就好 */
+  .evtbar{top:8px;left:8px;right:auto;min-width:0;max-width:calc(100% - 106px);transform:none;padding:6px 10px 7px}
+  .evtbar .ehead{font-size:11px}.evtbar .eco{font-size:11px}.evtbar .esub{font-size:9.5px}
+  .toast{top:74px;left:8px;right:8px;max-width:none;transform:translateY(-6px);font-size:10.5px;padding:6px 11px}
+  .toast.on{transform:none}
+  /* 操作列在直式手機疊成好幾列:現金＋行情一列、召喚卡一列、大招一列、結算一列 */
+  .dock{left:6px;right:6px;bottom:6px;transform:none;max-width:none;flex-direction:column;
+    gap:6px;padding:7px 8px;border-radius:13px}
+  .dock .target{display:none}
+  .tstrip{position:static;display:flex;gap:5px}
+  .sep{display:none}
+  .dockcol{gap:5px}
+  .dockcol .lab{display:none}
+  .cashcol{min-width:0;flex-direction:row;align-items:center;gap:10px}
+  .cash{font-size:17px;margin:0}
+  .ticker{flex-direction:row;align-items:center;gap:9px;margin:0;flex:1;min-width:0;overflow-x:auto}
+  .prow .pv{font-size:16px}.prow .pc{font-size:10.5px}
+  .spark{width:78px;height:20px;flex:none}
+  .phold{display:none}
+  .tk{display:flex;align-items:center;gap:4px;font-size:9px}
+  .tk .tkh,.tk .spark{display:none}
+  .u{padding:5px 3px 4px}
+  .u .n{font-size:9px}.u .c{font-size:11px;margin-top:2px}
+  .u .k{font-size:7px;top:3px;left:3px}
+  .u .n .px{font-size:8px}
+  .a{width:auto;flex:1;min-width:76px;padding:5px 7px;gap:0}
+  .a .t{font-size:9.5px}.a .d{display:none}.a .p{font-size:9px}
+  .acts{overflow-x:visible}
+  .ultcol{max-width:none}
+  .ultbtn{width:auto;flex-direction:row;align-items:center;gap:7px;padding:6px 8px;border-radius:10px}
+  .ultbtn .uhead{flex:none}
+  .ultbtn .uhead img{height:22px;width:22px}
+  .ultbtn .uhead b{font-size:11px}
+  .ultbtn .ug{margin-left:4px;font-size:7px}
+  .ultbtn .ud{flex:1;min-width:0;font-size:9px;line-height:1.35}
+  .ultbtn .us{flex:none;font-size:8px}
+  /* overlay 畫面 */
+  .ov{padding:max(12px,var(--sa-t)) max(12px,var(--sa-r)) max(12px,var(--sa-b)) max(12px,var(--sa-l))}
+  .panel{border-radius:16px}
+  .steps{gap:6px;margin:10px 0 12px}
+  .st{padding:8px 10px;display:flex;align-items:baseline;gap:8px}
+  .st b{margin:0;flex:none}.st span{font-size:12.5px}.st i{margin:0 0 0 4px}
+  .classes{gap:7px}
+  .ultrow{padding:5px 7px}
+  .cls{padding:10px 12px}.cls p{min-height:0;font-size:11px;margin-bottom:7px}
+  .cls .stat{display:none}
+  .roomcode-hint{margin-left:0;flex:1 1 100%}
+  .foot{justify-content:stretch}
+  .foot .btn{flex:1}
+}
+
+/* ---------- 很窄的手機 ---------- */
+@media (max-width:620px){
+  .pname{display:none}
+  .pshort{display:inline}
+  .pl .nm{max-width:none}
+  .pl{padding:4px 5px}
+  .players{gap:3px}
+  .u .g{font-size:14px}
+  .a{min-width:70px}
+  .rrow{font-size:11.5px;padding:8px 10px}
+}
+
+/* ---------- 手機橫式：畫面很矮，介面要壓成一條 ---------- */
+@media (orientation:landscape) and (max-height:560px){
+  .wrap{gap:5px;padding:max(5px,var(--sa-t)) max(6px,var(--sa-r)) max(6px,var(--sa-b)) max(6px,var(--sa-l))}
+  .hud{flex-wrap:nowrap;gap:8px;padding:4px 8px;border-radius:10px}
+  .brand{display:none}
+  .players{flex:1 1 auto;grid-template-columns:minmax(0,1fr);gap:4px;max-width:180px}
+  .players .pl:not(.me){display:none}                /* 橫式只留自己 */
+  .pl{padding:3px 6px;border-radius:8px}
+  .pl .nm{font-size:8.5px;max-width:none}.pl .val{font-size:10px}
+  .pl .bar{height:3px;margin-top:3px}
+  .leadchip{display:flex}
+  .clock{text-align:right;margin-inline:0}
+  .clock .t{font-size:19px}.clock .l{display:none}
+  .stage{border-radius:10px}
+  .dock{flex-direction:row;align-items:stretch;gap:9px;padding:6px 8px;left:6px;right:6px;bottom:6px;
+    border-radius:12px;transform:none;max-width:none}
+  .dock .target{display:none}
+  .sep{display:block;width:1px;margin:2px 0}
+  .dockcol{gap:3px}
+  .dockcol .lab{display:block;font-size:7.5px;letter-spacing:.8px}
+  .cashcol{min-width:110px;flex-direction:column;align-items:flex-start;gap:0}
+  .cash{font-size:15px;margin:0}
+  .ticker{flex-direction:column;gap:1px;margin-top:3px;overflow:visible;flex:none}
+  .prow .pv{font-size:14px}.prow .pc{font-size:9.5px}
+  .spark{height:16px}
+  .phold{font-size:8px}
+  .tk{display:grid;grid-template-columns:30px auto auto;gap:4px;font-size:8px}
+  .tk .tkh,.tk .spark{display:none}
+  .u{width:54px;padding:4px 2px 3px;border-radius:9px}
+  .u .uimg{height:26px}
+  .u .n{font-size:8.5px}.u .c{font-size:10.5px;margin-top:2px}
+  .u .k{font-size:6.5px;top:2px;left:3px}.u .n .px{font-size:7.5px}
+  .a{width:auto;flex:none;min-width:70px;padding:4px 7px}
+  .a .t{font-size:9px}.a .d{display:none}.a .p{font-size:8.5px}
+  .acts{overflow-x:auto}
+  .tstrip{position:absolute;left:0;right:0;bottom:calc(100% + 6px);display:flex;gap:4px}
+  .tchip{padding:2px 5px 2px 2px;border-radius:8px}
+  .tchip img{height:18px}.tchip .cp{font-size:8.5px}.tchip .cw{min-width:28px}
+  .tempty2{display:none}
+  .zoomctl{top:50%;bottom:auto;right:6px;transform:translateY(-60%);flex-direction:column;gap:4px}
+  .zoomctl button{width:30px;height:30px;font-size:12px}
+  .zoomctl .zbtn{display:none}
+  .evtbar{top:6px;left:6px;right:auto;transform:none;min-width:0;max-width:calc(100% - 46px);padding:5px 9px 6px}
+  .evtbar .ehead{font-size:10.5px}.evtbar .eco{font-size:10.5px}.evtbar .esub{font-size:9px}
+  .evtbar .ebar{margin-top:4px}
+  .toast{top:6px;left:6px;right:auto;transform:none;max-width:calc(100% - 46px);font-size:10px;padding:5px 9px}
+  .toast.on{transform:none}
+  /* overlay 畫面：橫式的高度是瓶頸，面板自己捲 */
+  .panel{padding:12px 14px 12px;max-height:92vh;max-height:92dvh;overflow-y:auto;overscroll-behavior:contain}
+  .panel h3{font-size:16px;margin-bottom:2px}
+  .panel .eyebrow{font-size:9px;margin-bottom:3px}
+  .panel p.lead{font-size:10.5px;margin-bottom:10px}
+  .steps{grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0 9px}
+  .st{padding:6px 8px}.st b{width:16px;height:16px;font-size:9px;margin-bottom:3px}
+  .st span{font-size:11px}.st i{font-size:9.5px}
+  .classes{grid-template-columns:repeat(4,1fr);gap:6px}
+  .cls{padding:8px 9px}.cls h4{font-size:13px}.cls p{font-size:9.5px;margin-bottom:5px}
+  .cspr{height:32px;width:32px}.chead{gap:7px;margin-bottom:5px}
+  .cls .cg{font-size:8px;margin-bottom:4px}
+  .cls .roster span{font-size:8.5px;padding:1px 4px}
+  .cls .stat{display:none}
+  .ultrow{padding:4px 6px;margin-top:6px}
+  .ultrow b{font-size:9.5px}.ultrow i{font-size:8.5px}
+  .iphero .ipcat{height:84px}
+  .ipword{font-size:15px}
+  .foot{justify-content:flex-end}
+  .foot .btn{flex:none}
+  /* 橫式：大招只留名字＋狀態，說明收起來 */
+  .ultcol{max-width:none;flex:none}
+  .ultbtn{width:152px;flex-direction:column;align-items:flex-start;gap:2px;padding:5px 7px;border-radius:10px}
+  .ultbtn .uhead{width:100%}
+  .ultbtn .uhead img{height:20px;width:20px}
+  .ultbtn .uhead b{font-size:10px}
+  .ultbtn .ug{font-size:7px;margin-left:auto}
+  .ultbtn .ud{display:none}
+  .ultbtn .us{font-size:7.5px;white-space:nowrap}
+}
+
+/* ---------- 大螢幕：介面跟著放大，才不會小到失衡 ---------- */
+@media (min-width:1700px){
+  :root{--u-w:92px;--u-img:40px;--a-w:126px;--ult-w:190px;--cash-w:172px;--dock-gap:16px;--unit-gap:8px}
+  .u{border-radius:13px}
+  .u .n{font-size:12px}.u .c{font-size:11px}.u .k{font-size:9px}
+  .a{padding:9px 11px}
+  .a .t{font-size:12.5px}.a .d{font-size:10.5px}.a .p{font-size:11px}
+  .cash{font-size:28px}
+  .tk{font-size:11px;grid-template-columns:38px auto auto auto 1fr}
+  .prow .pv{font-size:25px}.prow .pc{font-size:14px}.spark{height:32px}.phold{font-size:11px}
+  .dockcol .lab{font-size:11px}
+  .target{font-size:12px;padding:5px 14px}
+  .dock{padding:12px 15px;border-radius:18px}
+  .troops{width:296px}
+  .tn{font-size:12.5px}.tn em{font-size:10px}.tpl{font-size:11.5px}.tst{font-size:10.5px}
+  .tg{width:28px;height:28px}.tg img{height:23px}.tset{font-size:11.5px}
+  .ovl h2{font-size:11px}.troops h2 b{font-size:13px}
+  .pl .nm{font-size:13px}.pl .val{font-size:16px}.pl .sub{font-size:10.5px}
+  .clock .t{font-size:40px}.clock .l{font-size:11px}
+  .brand h1{font-size:18px}
+  .toast{font-size:13px;padding:10px 18px;border-radius:14px}
+}
+@media (min-width:2300px){
+  :root{--u-w:110px;--u-img:48px;--a-w:150px;--ult-w:210px;--cash-w:170px}
+  .u .n{font-size:14px}.u .c{font-size:12.5px}
+  .a .t{font-size:14px}.a .d{font-size:12px}.a .p{font-size:12.5px}
+  .cash{font-size:34px}.tk{font-size:12.5px}
+  .prow .pv{font-size:29px}.prow .pc{font-size:16px}.spark{height:38px}.phold{font-size:12.5px}
+  .troops{width:340px}.tn{font-size:14px}.tst{font-size:11.5px}
+  .tg{width:32px;height:32px}.tg img{height:27px}
+  .pl .val{font-size:19px}.pl .nm{font-size:15px}
+  .clock .t{font-size:48px}
+  .toast{font-size:15px}
+  .target{font-size:13.5px}
 }

@@ -19,7 +19,7 @@ export const MAP_PAL={
   pineL:"#8FD08B", pineD:"#3F8461",
   wood:"#D2A063", woodD:"#9A6E3E", woodL:"#EFCB92",
   wall:"#F4F1E4", wallD:"#CFC9B4", wallS:"#A8A392",
-  roof:"#E08C5A", roofD:"#B0643C", win:"#A3E635", smoke:"#DCE8DE"
+  roof:"#E08C5A", roofD:"#B0643C", win:"#91D500", smoke:"#DCE8DE"
 };
 export const P=MAP_PAL;
 
@@ -43,17 +43,28 @@ export const ZONES=(()=>{
     const h=Math.abs(q*7919+r*104729+d*31)%pool.length;
     out.push([q,r,pool[h]]);
   }
+  // 基地正前方的兩格不要放山／森林，免得擋住自己的家
+  const clear=new Set();
+  Object.keys(BASES).forEach(k=>{
+    const [bq,br]=k.split(",").map(Number);
+    [[0,1],[-1,1],[1,0]].forEach(([dq,dr])=>clear.add((bq+dq)+","+(br+dr)));
+  });
+  out.forEach(z=>{ if(clear.has(z[0]+","+z[1])&&(z[2]==="mountain"||z[2]==="forest")) z[2]="waste"; });
+  out.NOTALL=clear;
   return out;
 })();
+export const NOTALL=ZONES.NOTALL;                 // 這些格子不放高聳的前景物
+/* 高低差刻意壓得很平：舊版的山高 20、金庫 −11，等角投影下前排整個擋住後排，
+   而且鏡頭一拉遠就變成一堆柱子。新版把落差縮到 ±8 以內，看得出地勢但不擋路。 */
 export const ZINFO={
-  base    :{t:"基地",     s:"HOME",     yield:0,coin:null,elev:9},
-  exchange:{t:"交易所",   s:"FEE -50%", yield:0,coin:null,elev:13},
+  base    :{t:"基地",     s:"HOME",     yield:0,coin:null,elev:4},
+  exchange:{t:"交易所",   s:"FEE -50%", yield:0,coin:null,elev:2},
   mine_NOX:{t:"迷因幣礦坑",s:"HIGH RISK",yield:13,coin:"MEOW",elev:0},
   mine_KIBB:{t:"貓薄荷田",s:"STEADY",   yield:9,coin:"CATN",elev:0},
-  vault   :{t:"NOXCAT 金庫",s:"STABLE",  yield:6,coin:"NOX",elev:-11},
-  mountain:{t:"能源峰",   s:"COOLDOWN", yield:0,coin:null,elev:20},
-  forest  :{t:"森林",     s:"WOODS",    yield:0,coin:null,elev:5},
-  waste   :{t:"廢棄鏈",   s:"EMPTY",    yield:0,coin:null,elev:2}
+  vault   :{t:"NOXCAT 金庫",s:"STABLE",  yield:6,coin:"NOX",elev:-5},
+  mountain:{t:"能源峰",   s:"COOLDOWN", yield:0,coin:null,elev:8},
+  forest  :{t:"森林",     s:"WOODS",    yield:0,coin:null,elev:2},
+  waste   :{t:"廢棄鏈",   s:"EMPTY",    yield:0,coin:null,elev:1}
 };
 /* 簡化版只有一種幣，所以三種礦區的差別純粹是產量高低，名字也直接寫產量——
    完整版那種「這格產哪種幣」的判斷在簡化版不存在。地形本身（elev/外觀）不變。 */
@@ -68,13 +79,13 @@ export const ZMAP={};                                   // "q,r" → 索引（�
 ZONES.forEach((z,i)=>{ZMAP[z[0]+","+z[1]]=i;});
 export const ZELEV=ZONES.map((z,i)=>{                   // 每格再加一點高低起伏
   const rg=rngFor(i*613+29), t=z[2];
-  const j=(t==="mountain")?rg.f(-6,14):(t==="base"||t==="exchange")?0:
-          (t==="vault")?rg.f(-4,2):rg.f(-6,7);
+  const j=(t==="mountain")?rg.f(-2,4):(t==="base"||t==="exchange")?0:
+          (t==="vault")?rg.f(-1.5,1):rg.f(-2.5,2.5);
   return ZINFO[t].elev+Math.round(j);
 });
 export const ZSCALE=ZONES.map((z,i)=>{                   // 每格的大小略有變化（只放大，才不會露出縫）
   const rg=rngFor(i*911+53), t=z[2];
-  if(t==="exchange") return 1.16;                 // 交易所這塊特別大
+  if(t==="exchange") return 1.06;                 // 交易所這塊略大
   if(t==="base") return 1.10;
   return 1+rg.f(0,0.09);
 });
@@ -151,15 +162,23 @@ export function pBoulder(x,y,r){
    +PG([[x-r*0.45,y-r*0.92],[x+r*0.5,y-r*0.82],[x+r*0.05,y-r*0.34]],P.rockM)
    +PG([[x+r*0.5,y-r*0.82],[x+r,y+r*0.1],[x+r*0.05,y-r*0.34]],P.rockS), y];
 }
+export function shade(hex,f){                // 同色系壓暗，避免出現一塊死黑
+  const v=parseInt(hex.slice(1),16);
+  const c=[(v>>16)&255,(v>>8)&255,v&255].map(u=>Math.round(u*f));
+  return "#"+c.map(u=>u.toString(16).padStart(2,"0")).join("");
+}
 export function pHouse(x,y,w,h,roof,roofD,smoke){
   const d=w*0.6;
-  const sh=PG([[x-w,y],[x+w,y],[x+w+(h+d)*SH_DX,y+(h+d)*SH_DY],[x-w+(h+d)*SH_DX*0.6,y+(h+d)*SH_DY]],P.shadow);
+  const sx=h*0.5*SH_DX, sy=h*0.5*SH_DY;                   // 影子＝地基菱形平移，淡淡一片就好
+  const B=[x,y-d*KY], L=[x-w,y], F=[x,y+d*KY], R=[x+w,y], o=(pt)=>[pt[0]+sx,pt[1]+sy];
+  const sh=EL(x+sx*0.5,y+sy*0.5,w*1.12,d*KY*1.05,P.shadow,.42)
+          +PG([o(B),o(L),o(F),o(R)],P.shadow,'opacity=".5"');
   let b=PG([[x-w,y],[x,y+d*KY],[x,y+d*KY-h],[x-w,y-h]],P.wall)
        +PG([[x+w,y],[x,y+d*KY],[x,y+d*KY-h],[x+w,y-h]],P.wallD);
   // windows + door
   b+=PG([[x-w*0.62,y-h*0.42],[x-w*0.34,y-h*0.28],[x-w*0.34,y-h*0.66],[x-w*0.62,y-h*0.8]],P.win);
-  b+=PG([[x+w*0.34,y-h*0.3],[x+w*0.62,y-h*0.44],[x+w*0.62,y-h*0.82],[x+w*0.34,y-h*0.68]],"#8FB93F");
-  b+=PG([[x-w*0.2,y-h*0.02],[x-w*0.02,y+d*KY*0.9],[x-w*0.02,y+d*KY*0.9-h*0.5],[x-w*0.2,y-h*0.52]],"#6E5A44");
+  b+=PG([[x+w*0.34,y-h*0.3],[x+w*0.62,y-h*0.44],[x+w*0.62,y-h*0.82],[x+w*0.34,y-h*0.68]],"#7CB300");
+  b+=PG([[x-w*0.2,y-h*0.02],[x-w*0.02,y+d*KY*0.9],[x-w*0.02,y+d*KY*0.9-h*0.5],[x-w*0.2,y-h*0.52]],"#9AA3AB");
   // roof
   b+=PG([[x-w*1.14,y-h],[x,y+d*KY-h],[x,y-h-w*0.8]],roof)
    +PG([[x+w*1.14,y-h],[x,y+d*KY-h],[x,y-h-w*0.8]],roofD)
@@ -167,6 +186,7 @@ export function pHouse(x,y,w,h,roof,roofD,smoke){
    +PG([[x,y-h-w*0.8],[x-w*1.14,y-h],[x-w*1.05,y-h+w*0.07],[x,y-h-w*0.72]],"#FFFFFF",'opacity=".35"');
   if(smoke){
     b+=RC(x-w*0.62,y-h-w*0.46,w*0.2,w*0.42,roofD);
+    b+=RC(x-w*0.66,y-h-w*0.52,w*0.28,w*0.1,roof);
     b+=EL(x-w*0.52,y-h-w*0.72,w*0.16,w*0.12,P.smoke,.85)
       +EL(x-w*0.38,y-h-w*0.98,w*0.2,w*0.15,P.smoke,.6)
       +EL(x-w*0.2,y-h-w*1.28,w*0.24,w*0.18,P.smoke,.35);
@@ -181,7 +201,7 @@ export function pFrame(x,y,h){                       // 礦井井架
    +RC(x-h*0.26,y-h*0.3,h*0.52,h*0.06,P.wood);
   b+=`<circle cx="${x.toFixed(1)}" cy="${(y-h*1.02).toFixed(1)}" r="${(h*0.16).toFixed(1)}" fill="${P.woodL}"/>`
    +`<circle cx="${x.toFixed(1)}" cy="${(y-h*1.02).toFixed(1)}" r="${(h*0.07).toFixed(1)}" fill="${P.woodD}"/>`;
-  b+=PG([[x-h*0.13,y-h],[x+h*0.13,y-h],[x,y-h*1.2]],"#A3E635");
+  b+=PG([[x-h*0.13,y-h],[x+h*0.13,y-h],[x,y-h*1.2]],"#91D500");
   return [sh,b,y];
 }
 export function pCart(x,y,s,col){
@@ -218,9 +238,9 @@ export function pPier(x,y,w){
                              i%2?P.wood:P.woodL);
   return ["",b,y];
 }
-export function pCatSleep(x,y,s,fur,fur2){          // 蜷起來睡覺的貓（正面平畫，不會有透視歪斜）
-  fur=fur||"#1E2617"; fur2=fur2||"#33402A";
-  const LIME="#A3E635";
+export function pCatSleep(x,y,s,fur,fur2){          // NOXCAT：黑貓形體＋額前護目鏡，綠色只出現在鏡片與眼睛
+  fur=fur||"#101820"; fur2=fur2||"#1E2830";
+  const LIME="#91D500", LIME_D="#6CA000", GRY="#B2B2B2", DGRY="#3A424B";
   const sh=EL(x+s*0.22,y+s*0.2,s*1.25,s*0.42,P.shadow,.5);
   let b="";
   // 尾巴：從身體右側繞到前面
@@ -232,52 +252,61 @@ export function pCatSleep(x,y,s,fur,fur2){          // 蜷起來睡覺的貓（�
   b+=EL(x+s*0.5,y+s*0.3,s*0.2,s*0.14,fur2,.9);
   // 身體
   b+=EL(x+s*0.06,y-s*0.16,s*0.98,s*0.6,fur);
-  b+=EL(x+s*0.12,y-s*0.38,s*0.78,s*0.26,fur2,.85);        // 背上的亮面
-  b+=EL(x+s*0.02,y-s*0.44,s*0.6,s*0.16,"#48602C",.55);
+  b+=EL(x+s*0.12,y-s*0.38,s*0.78,s*0.26,fur2,.85);
   // 頭
   const hx=x-s*0.66, hy=y-s*0.3, R=s*0.52;
   b+=PG([[hx-R*0.86,hy-R*0.34],[hx-R*0.16,hy-R*0.5],[hx-R*0.72,hy-R*1.24]],fur)
    +PG([[hx+R*0.86,hy-R*0.34],[hx+R*0.16,hy-R*0.5],[hx+R*0.72,hy-R*1.24]],fur)
-   +PG([[hx-R*0.68,hy-R*0.42],[hx-R*0.3,hy-R*0.5],[hx-R*0.6,hy-R*0.98]],"#3E5228")
-   +PG([[hx+R*0.68,hy-R*0.42],[hx+R*0.3,hy-R*0.5],[hx+R*0.6,hy-R*0.98]],"#3E5228");
+   +PG([[hx-R*0.68,hy-R*0.42],[hx-R*0.3,hy-R*0.5],[hx-R*0.6,hy-R*0.98]],DGRY)
+   +PG([[hx+R*0.68,hy-R*0.42],[hx+R*0.3,hy-R*0.5],[hx+R*0.6,hy-R*0.98]],DGRY);
   b+=EL(hx,hy,R,R*0.9,fur);
   // 閉著的眼睛（兩道彎）＋鼻子
   for(const k of [-1,1]){
-    b+=`<path d="M${(hx+k*R*0.46-R*0.2).toFixed(1)},${(hy-R*0.02).toFixed(1)}
-         Q${(hx+k*R*0.46).toFixed(1)},${(hy+R*0.2).toFixed(1)} ${(hx+k*R*0.46+R*0.2).toFixed(1)},${(hy-R*0.02).toFixed(1)}"
+    b+=`<path d="M${(hx+k*R*0.46-R*0.2).toFixed(1)},${(hy+R*0.12).toFixed(1)}
+         Q${(hx+k*R*0.46).toFixed(1)},${(hy+R*0.34).toFixed(1)} ${(hx+k*R*0.46+R*0.2).toFixed(1)},${(hy+R*0.12).toFixed(1)}"
          fill="none" stroke="${LIME}" stroke-width="${(R*0.13).toFixed(1)}" stroke-linecap="round"/>`;
   }
-  b+=PG([[hx-R*0.13,hy+R*0.3],[hx+R*0.13,hy+R*0.3],[hx,hy+R*0.5]],"#D9F2A6");
+  b+=PG([[hx-R*0.12,hy+R*0.42],[hx+R*0.12,hy+R*0.42],[hx,hy+R*0.6]],GRY);
+  // 額前護目鏡：灰色頭帶＋兩片綠鏡片（NOXCAT 核心識別）
+  const gy=hy-R*0.42;
+  b+=`<path d="M${(hx-R*1.02).toFixed(1)},${(gy+R*0.10).toFixed(1)}
+       Q${hx.toFixed(1)},${(gy-R*0.30).toFixed(1)} ${(hx+R*1.02).toFixed(1)},${(gy+R*0.10).toFixed(1)}"
+       fill="none" stroke="${DGRY}" stroke-width="${(R*0.3).toFixed(1)}" stroke-linecap="round"/>`;
+  for(const k of [-1,1]){
+    const lx=hx+k*R*0.5, ly=gy-R*0.02;
+    b+=EL(lx,ly,R*0.44,R*0.36,GRY)
+      +EL(lx,ly,R*0.34,R*0.27,LIME_D)
+      +EL(lx,ly-R*0.02,R*0.30,R*0.22,LIME)
+      +EL(lx-R*0.1,ly-R*0.08,R*0.12,R*0.07,"#C4F266",.9);
+  }
+  b+=RC(hx-R*0.12,gy-R*0.12,R*0.24,R*0.2,GRY,1);
   // 前腳
-  b+=EL(hx+R*0.9,hy+R*0.78,R*0.42,R*0.22,fur2)+EL(hx+R*1.6,hy+R*0.86,R*0.42,R*0.22,fur2);
-  // 綠色項圈與吊牌（IP 標記）
-  b+=`<path d="M${(hx-R*0.6).toFixed(1)},${(hy+R*0.72).toFixed(1)}
-       Q${(hx+R*0.05).toFixed(1)},${(hy+R*1.0).toFixed(1)} ${(hx+R*0.62).toFixed(1)},${(hy+R*0.62).toFixed(1)}"
-       fill="none" stroke="${LIME}" stroke-width="${(R*0.14).toFixed(1)}" stroke-linecap="round" opacity=".95"/>`;
+  b+=EL(hx+R*0.9,hy+R*0.9,R*0.42,R*0.22,fur2)+EL(hx+R*1.6,hy+R*0.98,R*0.42,R*0.22,fur2);
   return [sh,b,y];
 }
 export function pExchange(x,y,s){                  // NOXCAT 交易所：黑色小屋＋門口睡著的黑貓
   const w=s*1.05, h=s*1.5, d=s*0.5;
-  const L="#1B2218", R="#0D120C", TOP="#28321F", LIME="#A3E635";
+  const L="#171E26", R="#0C1118", TOP="#222C36", LIME="#91D500";
   const bx=x+s*0.34, by=y-s*0.18;                    // 房子往右後方擺，貓睡在左前方
   const sd=(h+d)*0.55;
-  const sh=PG([[bx-w,by],[bx+w,by],[bx+w+sd*SH_DX,by+sd*SH_DY],
-               [bx-w+sd*SH_DX*0.6,by+sd*SH_DY]],P.shadow,'opacity=".55"');
+  const sx=sd*0.5*SH_DX, sy=sd*0.5*SH_DY, o=(pt)=>[pt[0]+sx,pt[1]+sy];
+  const sh=EL(bx+sx*0.5,by+sy*0.5,w*1.12,d*KY*1.6,P.shadow,.4)
+          +PG([o([bx,by-d*KY]),o([bx-w,by]),o([bx,by+d*KY]),o([bx+w,by])],P.shadow,'opacity=".5"');
   let b=PG([[bx-w,by],[bx,by+d],[bx,by+d-h],[bx-w,by-h]],L)
        +PG([[bx+w,by],[bx,by+d],[bx,by+d-h],[bx+w,by-h]],R)
        +PG([[bx-w,by-h],[bx,by+d-h],[bx+w,by-h],[bx,by-h-d]],TOP);
   // 屋頂貓耳
   b+=PG([[bx-w*0.9,by-h+w*0.06],[bx-w*0.3,by-h+w*0.36],[bx-w*0.66,by-h-s*0.7]],TOP)
-   +PG([[bx+w*0.9,by-h+w*0.06],[bx+w*0.3,by-h+w*0.36],[bx+w*0.66,by-h-s*0.7]],"#161C12")
-   +PG([[bx-w*0.76,by-h+w*0.13],[bx-w*0.44,by-h+w*0.28],[bx-w*0.62,by-h-s*0.4]],"#3E5228");
+   +PG([[bx+w*0.9,by-h+w*0.06],[bx+w*0.3,by-h+w*0.36],[bx+w*0.66,by-h-s*0.7]],"#141A21")
+   +PG([[bx-w*0.76,by-h+w*0.13],[bx-w*0.44,by-h+w*0.28],[bx-w*0.62,by-h-s*0.4]],"#3A424B");
   // 招牌：綠色燭線
-  b+=PG([[bx+w*0.2,by-h*0.72],[bx+w*0.95,by-h*0.42],[bx+w*0.95,by-h*0.1],[bx+w*0.2,by-h*0.4]],"#101609");
+  b+=PG([[bx+w*0.2,by-h*0.72],[bx+w*0.95,by-h*0.42],[bx+w*0.95,by-h*0.1],[bx+w*0.2,by-h*0.4]],"#0D1219");
   for(let i=0;i<4;i++){
     const t0=0.3+i*0.16, px=bx+w*t0, py=by-h*0.6+w*t0*0.42, hh=s*(0.2+((i*29)%4)/13);
-    b+=PG([[px,py],[px+s*0.1,py+s*0.04],[px+s*0.1,py+s*0.04-hh],[px,py-hh]],i%2?LIME:"#5F8F1C");
+    b+=PG([[px,py],[px+s*0.1,py+s*0.04],[px+s*0.1,py+s*0.04-hh],[px,py-hh]],i%2?LIME:"#5C8A00");
   }
   // 門口的門
-  b+=PG([[bx-w*0.34,by+d*0.5],[bx-w*0.06,by+d*0.64],[bx-w*0.06,by+d*0.64-h*0.44],[bx-w*0.34,by+d*0.5-h*0.44]],"#2A3524");
+  b+=PG([[bx-w*0.34,by+d*0.5],[bx-w*0.06,by+d*0.64],[bx-w*0.06,by+d*0.64-h*0.44],[bx-w*0.34,by+d*0.5-h*0.44]],"#26303A");
   const cat=pCatSleep(x-s*0.66,y+s*0.36,s*0.78);
   return [sh+cat[0], b+cat[1], y];
 }
@@ -311,14 +340,15 @@ export function pFlag(x,y,h,col){
 }
 
 /* ---------------- 單一地塊的 SVG（供 renderMap 組合整張地圖） ---------------- */
-export function tileSVG(idx,myIndex){
+export function tileSVG(idx,myIndex,mode){
   myIndex=myIndex??0;
+  const simple=(mode==="simple");
   const [q,r,type,owner]=ZONES[idx], z=ZINFO[type], {x,y}=hexXY(q,r);
   const rg=rngFor(idx*97+13);
   const water=(type==="vault");
   const elev=ZELEV[idx];
   const F=ZSCALE[idx];
-  const p=isoPts(x,y,F), dep=DEPTH+elev+(water?12:0)+(type==="exchange"?34:0);  // 交易所是一塊高台
+  const p=isoPts(x,y,F), dep=DEPTH+elev+(water?12:0)+(type==="exchange"?2:0);   // 交易所只高一點點
   const sides=water?P.wSide:(type.startsWith("mine")?P.soil:
               (type==="mountain"?["#7C8A8C","#68767A","#556269","#434E56"]:P.gSide));
   let s=`<g class="hex" data-z="${idx}">`;
@@ -344,7 +374,7 @@ export function tileSVG(idx,myIndex){
       s+=RC(x+rg.f(-26,4),y+rg.f(-16,18),rg.f(16,34),3.2,P.wLight,1.6);
   }else{
     const GTOPS=["#2A5C4E","#2F6555","#356F5C","#3A7864","#40836D","#478C74"];
-    const gi=type==="exchange"?5:clamp(Math.round((elev+9)/7)+rg.i(-1,1),0,5);
+    const gi=type==="exchange"?5:clamp(Math.round((elev+5)/3.2)+rg.i(-1,1),0,5);
     const base=type==="waste"?P.gWaste:GTOPS[gi];
     s+=PG(p,base,`class="top" stroke="${P.seam}" stroke-width="1.4" stroke-linejoin="round"`);
     s+=PG([p[5],p[0],p[1],inner[1],inner[0],inner[5]],P.gBevel,'opacity=".5"');
@@ -368,30 +398,33 @@ export function tileSVG(idx,myIndex){
     s+=PG(isoPts(x,y,0.93*F),"none",`stroke="${PLAYER_COLORS[owner]}" stroke-width="${owner===myIndex?3.4:2.2}"
         stroke-linejoin="round" opacity="${owner===myIndex?.95:.7}"`);
     if(owner===myIndex) s+=PG(isoPts(x,y,0.8*F),PLAYER_COLORS[myIndex],'opacity=".08"');
-    add(pHouse(x+4,y+12,15,14,PLAYER_COLORS[owner],"#1E2A1C",true));
-    add(pHouse(x-24,y+20,10,9,PLAYER_COLORS[owner],"#1E2A1C",false));
+    const rD=shade(PLAYER_COLORS[owner],0.62);
+    add(pHouse(x+4,y+12,15,14,PLAYER_COLORS[owner],rD,true));
+    add(pHouse(x-24,y+20,10,9,PLAYER_COLORS[owner],rD,false));
     add(pFlag(x+26,y+4,30,PLAYER_COLORS[owner]));
     add(pBush(x+30,y+20,7));
     add(pPine(x-32,y+2,30,15));
   }else if(type==="exchange"){
     add(pExchange(x,y+12,21));
     add(pBush(x-46,y-2,7));add(pBush(x+48,y-4,6));      // 草叢挪到左右後方，別擋到貓
-    add(pFlag(x-34,y-12,24,"#A3E635"));
+    add(pFlag(x-34,y-12,24,"#91D500"));
   }else if(type==="mine_NOX"||type==="mine_KIBB"){
-    const nox=type==="mine_NOX", col=nox?"#F5A524":"#4FD1C5";   // 迷因幣＝橘、貓薄荷＝青
+    const nox=type==="mine_NOX";
+    // 完整版照幣種分色（迷因幣＝橘、貓薄荷＝青）；簡化版全場同一種幣，改用亮度分產量
+    const col=simple?(nox?"#91D500":"#7FB024"):(nox?"#F5A524":"#4FD1C5");
     s+=EL(x+2,y+8,HEXR*0.55,HEXR*0.55*KY,col,.12);          // 地面色圈
     s+=`<ellipse cx="${(x+2).toFixed(1)}" cy="${(y+8).toFixed(1)}" rx="${(HEXR*0.55).toFixed(1)}"
         ry="${(HEXR*0.55*KY).toFixed(1)}" fill="none" stroke="${col}" stroke-width="2"
         stroke-dasharray="${nox?"7 6":"3 5"}" opacity=".55"/>`;
     bd+=pOre(x+2,y+4,col,rg);
     add(pFrame(x-26,y+2,34));
-    add(pSign(x+22,y+15,17,col,nox?"MEME":"CATN"));
+    add(pSign(x+22,y+15,17,col,simple?(nox?"BIG":"MINE"):(nox?"MEME":"CATN")));
     add(pCart(x+8,y+20,8,col));
     for(let i=0;i<3;i++) add(pBoulder(x+rg.f(-40,40),y+rg.f(-14,-2),rg.f(5,8)));
   }else if(type==="vault"){
     add(pPier(x-30,y+14,16));
     add(pVault(x+4,y-2,17));
-    add(pSign(x+26,y+12,15,"#A3E635","NOX"));
+    add(pSign(x+26,y+12,15,simple?"#5C8A00":"#91D500","NOX"));
   }else if(type==="mountain"){
     add(pRock(x+6,y+10,rg.f(52,64),rg.f(48,60),rg,true));
     add(pRock(x-24,y+16,rg.f(26,36),rg.f(28,36),rg,rg.i(0,2)===0));
@@ -410,10 +443,13 @@ export function tileSVG(idx,myIndex){
       else add(pPine(fx,fy,rg.f(28,42),rg.f(14,19)));
     });
   }else{                                                   // waste
-    for(let i=0;i<rg.i(2,4);i++) add(pBoulder(x+rg.f(-40,40),y+rg.f(-10,16),rg.f(5,10)));
-    if(rg.i(0,2)===0) add(pPine(x+rg.f(-22,22),y+rg.f(2,14),rg.f(22,30),12));
+    const low=NOTALL.has(q+","+r);                          // 基地正前方：只放矮的
+    for(let i=0;i<rg.i(2,4);i++) add(pBoulder(x+rg.f(-40,40),y+rg.f(-10,16),rg.f(5,low?7:10)));
+    if(!low&&rg.i(0,2)===0) add(pPine(x+rg.f(-22,22),y+rg.f(2,14),rg.f(22,30),12));
     if(rg.i(0,2)===0) add(pBush(x+rg.f(-30,30),y+rg.f(0,16),rg.f(6,9)));
   }
-  return {g:s+sh+bd+"</g>", props};
+  const cid="hclip"+idx;                                   // 影子不可以掉出地塊外
+  const clip=`<clipPath id="${cid}"><polygon points="${PS(p)}"/></clipPath>`;
+  return {g:s+clip+`<g clip-path="url(#${cid})">`+sh+`</g>`+bd+"</g>", props};
 }
 

@@ -1,6 +1,7 @@
 import {
   createCoins, CLASSES, PLAYER_COLORS, ROSTER, PACK, ALLIN_MIN,
-  coinKeysFor, unitsFor, coinUnitsFor, isSimple, isLocked, lockLeft, LATE_T
+  coinKeysFor, unitsFor, coinUnitsFor, isSimple, isLocked, lockLeft, LATE_T,
+  ULTS, ULT_CD, DCA_T, DCA_EVERY, STAKE_T, ALPHA_T
 } from "@noxcat/shared/constants.js";
 import { ZONES, hexXY, zinfoFor } from "@noxcat/shared/board.js";
 import * as D from "@noxcat/shared/derived.js";
@@ -66,7 +67,8 @@ export function createGameInstance({ emit, mode = "full" }) {
   function freshStats() {
     return {
       buys: 0, invested: 0, sells: 0, realized: 0, best: null, worst: null, holdSum: 0, holdN: 0,
-      deaths: 0, deathLoss: 0, rugLoss: 0, allin: 0, allinPL: null, spend: { NOX: 0, CATN: 0, MEOW: 0 }
+      deaths: 0, deathLoss: 0, rugLoss: 0, allin: 0, allinPL: null, ult: null, ultN: 0,
+      spend: { NOX: 0, CATN: 0, MEOW: 0 }
     };
   }
 
@@ -83,6 +85,10 @@ export function createGameInstance({ emit, mode = "full" }) {
       i, color: PLAYER_COLORS[i], isBot: !!seat.isBot, name: seat.name || (seat.isBot ? `電腦 ${i + 1}` : "玩家"),
       cls: seat.cls, cash: CLASSES[seat.cls].cash, start: CLASSES[seat.cls].cash,
       alive: true, cd: {}, allin: false, auto: "sell", reliefT: 4, incT: 1, aiNext: 1.4 + i * 0.6,
+      /* 大招：ultCd 冷卻秒數、lockT 鎖倉剩餘秒數、dca 定期定額進行中的計時器。
+         這三個都是「每人一份」——原型是單機版所以寫成全域的 S.lock/S.dca,
+         多人版任何一個人放招都不能影響到別人。 */
+      ultCd: 0, lockT: 0, dca: null,
     }));
     priv = S.players.map(() => ({ stats: freshStats() }));
   }
@@ -95,7 +101,11 @@ export function createGameInstance({ emit, mode = "full" }) {
   let fxBuf = [], sfxBuf = [];
   function fxShot(a, b, col) { fxBuf.push({ k: "shot", x1: a.x, y1: a.y - 8, x2: b.x, y2: b.y - 8, c: col }); }
   function fxHit(x, y, col) { fxBuf.push({ k: "hit", x, y: y - 8, c: col }); }
-  function fxDmg(x, y, v, mine) { fxBuf.push({ k: "dmg", x, y: y - 16, v: Math.max(1, Math.round(v)), mine }); }
+  /* 傷害數字是廣播出去的,伺服器不知道看的人是誰,所以只送「被打的是第幾號座位」,
+     紅字(我被打)還是綠字(我打到人)由每個 client 自己比對。原本這裡寫死 mine:true,
+     結果每個人看到的每一發都是紅色的「-N」,連自己在打對手都像在挨打。
+     v 可以是 0——鎖倉擋下來的那一發,客戶端會畫成一個青色的 0。 */
+  function fxDmg(x, y, v, pi) { fxBuf.push({ k: "dmg", x, y: y - 16, v: Math.max(0, Math.round(v)), p: pi }); }
   function fxKill(x, y, col) { fxBuf.push({ k: "kill", x, y: y - 8, c: col }); }
   function fxCoin(x, y, txt, col) { fxBuf.push({ k: "coin", x: x + (Math.random() * 10 - 5), y: y - 14, txt, c: col }); }
   function sfx(kind, vol) { sfxBuf.push({ kind, vol }); }
@@ -193,7 +203,7 @@ export function createGameInstance({ emit, mode = "full" }) {
 
   /* ============================ 操作：召喚＝買入 ============================ */
   function summon(pi, k, zone) {
-    if (k === "titan") return allIn(pi, "titan", zone);
+    if (k === "titan") return useUlt(pi);            // 巨獸只從梭哈青年的大招出場
     const p = S.players[pi], u = UNITS[k], cost = costOf(k, p);
     if (!p || !p.alive || (p.cd[k] || 0) > 0 || p.cash < cost) return;
     if (isLocked(mode, k, S.t)) {
@@ -218,21 +228,62 @@ export function createGameInstance({ emit, mode = "full" }) {
     priceImpact(u.coin, cost);
     sfx("buy", 1);
   }
+  /* ALL-IN 現在是梭哈青年的大招,所以受 60 秒冷卻管、不再是「每場一次」。
+     bot 沒有大招,還是照舊用 p.allin 那條一次性的路。 */
   function allIn(pi, k, zone) {
-    const p = S.players[pi], u = UNITS[k];
-    if (!p || p.allin || p.cash < ALLIN_MIN || !p.alive) return;
-    if (isLocked(mode, k, S.t)) {
+    const p = S.players[pi], u = UNITS[k || "titan"];
+    if (!p || p.cash < ALLIN_MIN || !p.alive) return;
+    if (isLocked(mode, "titan", S.t)) {
       toast(`🔒 <b>巨獸</b>還沒解鎖 — <b>${lockLeft(S.t)} 秒</b>後開打`, "warn", 2600, pi); return;
     }
     if (COINS[u.coin].price <= 0.002) {
       toast(`⚠ <b>${u.coin}</b> 已經歸零，All-in 沒有意義`, "bad", 4200, pi); return;
     }
     const stake = p.cash, target = (!simple && zone != null) ? zone : defaultTarget(pi, "soldier");
-    priv[pi].stats.allin = stake;
-    toast(`<b>ALL-IN</b>：${money(stake)} 全押 ${u.coin}，巨獸出場（每場一次）`, "warn", 3600);
-    p.cash = 0; p.allin = true;
+    const st = priv[pi].stats;
+    st.allin = stake; st.ult = "degen"; st.ultN++;
+    toast(`<b>ALL-IN</b>：${p.name} 把 ${money(stake)} 全押 ${u.coin}，巨獸出場`, "warn", 3600);
+    p.cash = 0; p.allin = true; p.ultCd = ULT_CD;
     spawn(pi, "titan", target, false, { coin: u.coin, stake });
     priceImpact(u.coin, stake * 1.6);
+  }
+
+  /* ============================ 操作：大招 ============================ */
+  /* 一個身份一招,冷卻 60 秒。梭哈青年的招就是 ALL-IN(所以巨獸只有他召得出來),
+     其餘三招都是把一個投資觀念做成 12～24 秒的場上效果,賽後 lessons 再翻成名詞。 */
+  function useUlt(pi) {
+    const p = S.players[pi], ult = p && ULTS[p.cls];
+    if (!p || !p.alive || !ult) return;
+    if (p.ultCd > 0) {
+      toast(`大招冷卻中 — 還要 <b>${Math.ceil(p.ultCd)} 秒</b>`, "warn", 2200, pi); return;
+    }
+    if (p.cls === "degen" && isLocked(mode, "titan", S.t)) {
+      toast(`🔒 巨獸還沒解鎖 — <b>${lockLeft(S.t)} 秒</b>後開打`, "warn", 2600, pi); return;
+    }
+    if (p.cash < ult.min) {
+      toast(`還差 <b>${money(ult.min - p.cash)}</b> 才發得動 <b>${ult.n}</b>`, "warn", 2600, pi); return;
+    }
+    /* ALL-IN 自己會扣 cash / 設冷卻 / 記 stats,所以直接轉過去就好。 */
+    if (p.cls === "degen") return allIn(pi, "titan");
+
+    p.ultCd = ULT_CD;
+    const st = priv[pi].stats;
+    st.ult = p.cls; st.ultN++;
+    sfx("warn", 1);
+    if (p.cls === "office") {
+      p.dca = { t: DCA_T, acc: DCA_EVERY - 0.1 };
+      toast(`💵 <b>定期定額</b>啟動：接下來 ${DCA_T} 秒每 ${DCA_EVERY} 秒自動買一隻礦工，不看幣價`, "warn", 4200, pi);
+    } else if (p.cls === "saver") {
+      p.lockT = STAKE_T;
+      toast(`🔒 <b>鎖倉</b> ${STAKE_T} 秒：你的貓不會受傷，現在結算保證不虧本`, "warn", 4200, pi);
+    } else if (p.cls === "insider") {
+      /* 內線消息是「把下一則新聞提前告訴你,而且延後發動」——所以 pending/evtT 是
+         共用的市場狀態,別人也會被影響。這是刻意的:資訊優勢的價值來自你比別人
+         早知道,不是來自別人看不到那則新聞。 */
+      if (!S.pending) S.pending = EVENTS[Math.floor(Math.random() * EVENTS.length)];
+      S.trend = null; S.evtT = ALPHA_T; S.warn = 1;
+      toast(`🔮 <b>內線消息</b>：${S.pending.t} — <b>${ALPHA_T} 秒後</b>才發動，你有時間先動`, "warn", 6000, pi);
+    }
   }
 
   /* ============================ 操作：結算＝賣出 ============================ */
@@ -294,16 +345,46 @@ export function createGameInstance({ emit, mode = "full" }) {
     });
   }
 
+  /* ---- 大招的計時：冷卻、鎖倉倒數，以及定期定額固定節奏自動買 ---- */
+  function tickUlts(dt) {
+    S.players.forEach(p => {
+      if (p.ultCd > 0) p.ultCd = Math.max(0, p.ultCd - dt);
+      if (p.lockT > 0) p.lockT = Math.max(0, p.lockT - dt);
+      if (!p.dca) return;
+      if (!p.alive) { p.dca = null; return; }
+      p.dca.t -= dt; p.dca.acc += dt;
+      if (p.dca.acc >= DCA_EVERY) {
+        p.dca.acc = 0;
+        /* 定期定額：不看幣價、也不看冷卻,固定節奏買一隻礦工。買不起就跳過這一拍
+           (現實裡沒錢也是扣不到款),不會讓玩家變成負的。 */
+        const cost = costOf("miner", p) / PACK;
+        if (p.cash >= cost) {
+          p.cash -= cost;
+          const st = priv[p.i].stats;
+          st.buys++; st.invested += cost; st.spend[UNITS.miner.coin] += cost;
+          spawn(p.i, "miner", defaultTarget(p.i, "miner"), false, { coin: UNITS.miner.coin, stake: cost });
+          priceImpact(UNITS.miner.coin, cost);
+          sfx("buy", 0.6);
+        }
+      }
+      if (p.dca.t <= 0) {
+        p.dca = null;
+        toast("定期定額結束 — 你在高點低點都買過了", "warn", 3000, p.i);
+      }
+    });
+  }
+
   /* ============================ 模擬 ============================ */
   function step(dt) {
     S.players.forEach(p => { for (const k in p.cd) p.cd[k] = Math.max(0, p.cd[k] - dt); });
+    tickUlts(dt);
     marketEvents(dt);
     S.avgW = avgWorth();
 
     /* 簡化版：前 60 秒只能挖礦，時間一到廣播解鎖，不然玩家不會發現按鈕活了。 */
     if (simple && !S.unlocked && S.t <= LATE_T) {
       S.unlocked = true;
-      toast("⚔️ <b>戰鬥兵解鎖了</b> — 士兵、刺客、巨獸現在可以召喚，去搶別人的礦區", "warn", 4600);
+      toast("⚔️ <b>戰鬥兵解鎖了</b> — 士兵、刺客現在可以召喚，梭哈青年的巨獸大招也開了，去搶別人的礦區", "warn", 4600);
       sfx("warn", 1);
     }
 
@@ -358,13 +439,14 @@ export function createGameInstance({ emit, mode = "full" }) {
           if (u.atkT <= 0) {
             u.atkT = 0.65;
             const dmg = (u.atk || d.atk) * powerMul(u);
-            tgt.hp -= dmg;
+            const shielded = S.players[tgt.p].lockT > 0;      // 鎖倉中：那個人的貓不受傷
+            if (!shielded) tgt.hp -= dmg;
             u.combatT = 1.4; tgt.combatT = 1.4; tgt.hitT = 0.2;
             fxShot(u, tgt, PLAYER_COLORS[u.p]);
             fxHit(tgt.x, tgt.y, PLAYER_COLORS[u.p]);
-            fxDmg(tgt.x, tgt.y, dmg, true);
+            fxDmg(tgt.x, tgt.y, shielded ? 0 : dmg, tgt.p);
             sfx("shot", 0.8);
-            if (tgt.hp <= 0) {
+            if (!shielded && tgt.hp <= 0) {
               tgt.alive = false;
               fxKill(tgt.x, tgt.y, PLAYER_COLORS[tgt.p]);
               const loot = posValue(tgt) * 0.15;
@@ -395,7 +477,7 @@ export function createGameInstance({ emit, mode = "full" }) {
           u.mineFx = 0.55;
           const c = COINS[u.coin];
           fxCoin(u.x, u.y, hold ? "+" + (usd / c.price).toFixed(2) + " " + u.coin : "+$" + usd.toFixed(1),
-            hold ? c.hex : "#A3E635");
+            hold ? c.hex : "#91D500");
           sfx("coin", 0.55);
         }
       }
@@ -414,7 +496,7 @@ export function createGameInstance({ emit, mode = "full" }) {
         if (r > 1.12 || u.hp / u.hpMax < 0.35 || (S.t < 12 && r > 0.98)) settle(u, true);
       });
       /* bot 也受簡化版的解鎖限制,不然前 60 秒會變成「只有電腦能打人」。 */
-      const pool = ROSTER.filter(k => k !== "titan" && costOf(k, p) <= p.cash && COINS[UNITS[k].coin].price > 0.002 && !(p.cd[k] > 0) && !isLocked(mode, k, S.t));
+      const pool = ROSTER.filter(k => costOf(k, p) <= p.cash && COINS[UNITS[k].coin].price > 0.002 && !(p.cd[k] > 0) && !isLocked(mode, k, S.t));
       if (pool.length) {
         const wts = pool.map(k => { const c = COINS[UNITS[k].coin]; return Math.max(0.2, c.price / c.ref); });
         let s = wts.reduce((a, b) => a + b, 0) * Math.random(), pick = pool[0];
@@ -425,7 +507,7 @@ export function createGameInstance({ emit, mode = "full" }) {
           spawn(p.i, pick, tz, false, { coin: UNITS[pick].coin, stake: cost / packOf(pick) });
         priceImpact(UNITS[pick].coin, cost * 0.6);
       }
-      if (!p.allin && S.t < 45 && p.cash > 1200 && Math.random() < 0.35) {
+      if (!p.allin && S.t < 45 && !isLocked(mode, "titan", S.t) && p.cash > 1200 && Math.random() < 0.35) {
         const k = Math.random() < 0.6 ? "soldier" : "guard";
         p.allin = true; const stake = p.cash; p.cash = 0;
         spawn(p.i, "titan", defaultTarget(p.i, k), false, { coin: UNITS[k].coin, stake });
@@ -489,6 +571,19 @@ export function createGameInstance({ emit, mode = "full" }) {
         `你平均抱了 ${avg.toFixed(0)} 秒。抱久了能吃到整段趨勢，
          但也要<b>忍受中間的上下震盪</b>，而且錢卡著就不能拿去做別的事。`]);
     }
+    /* 大招那一課：把玩家剛剛按的那顆按鈕翻成現實裡的名詞。梭哈青年的招就是
+       ALL-IN,已經有下面「部位大小」那一課在講,這裡就不重複。 */
+    if (st.ult && ULTS[st.ult] && st.ult !== "degen") {
+      const body = {
+        office: `你按下定期定額之後，系統照固定節奏幫你買，完全不看當下貴不貴。
+                 現實裡這叫<b>定期定額</b>：放棄猜高低點，用時間把成本攤平。`,
+        saver: `鎖倉那 ${STAKE_T} 秒，你的貓不會受傷、結算也保證不虧本——代價是這段時間錢動不了。
+                現實裡的<b>質押</b>就是這樣：把幣鎖起來換穩定收益，鎖住期間不能賣。`,
+        insider: `你提前 ${ALPHA_T} 秒知道新聞要往哪走，然後才決定買或賣。這叫<b>資訊優勢</b>——
+                  在真實市場裡，用未公開消息交易是<b>違法的內線交易</b>。`
+      }[st.ult];
+      out.push([ULTS[st.ult].term, `你按了 ${st.ultN || 1} 次的那一招`, body]);
+    }
     if (st.allin > 0 && st.allinPL != null) {
       out.push(["部位大小 · Position Sizing", "重倉的代價",
         `你 All-in 了 ${money(st.allin)}，最後${st.allinPL >= 0 ? `多賺 ${money(st.allinPL)}` : `賠掉 ${money(-st.allinPL)}`}。
@@ -502,7 +597,7 @@ export function createGameInstance({ emit, mode = "full" }) {
   return {
     S, COINS,
     initPlayers, step, tickPrices, flushEvents,
-    summon, allIn, settleAll, settleGroup, settleOneById,
+    summon, useUlt, settleAll, settleGroup, settleOneById,
     lessonsFor,
     statsFor: (pi) => priv[pi].stats,
     alivePlayerCount: () => S.players.filter(p => p.alive).length,
