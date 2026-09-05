@@ -107,29 +107,29 @@ export const ALPHA_T = 8;                    // 內線消息：新聞延後 8 �
 export const CLASSES = {
   office: {
     n: "小資上班族", g: "SALARY",
-    d: "本金少，但每個月薪水會進來。適合細水長流。",
-    tags: ["開局 $600", "收入 ×1.5", "波動影響小"],
+    d: "本金少，但薪水一直進來。",
+    tags: ["$600", "收入 ×1.5"],
     cash: 600, incMul: 1.5, costMul: 1.0, fee: 0.005, cdMul: 0.8, mine: 1.1,
     lo: 0.8, hi: 1.25, lead: 6
   },
   saver: {
     n: "定存族", g: "SAVER",
-    d: "本金厚但求穩，漲跌對你的影響最小，抱越久越賺。",
-    tags: ["開局 $1,500", "收入 ×0.6", "抱久加成"],
+    d: "本金厚、求穩，抱越久越賺。",
+    tags: ["$1,500", "抗跌最強"],
     cash: 1500, incMul: 0.6, costMul: 1.0, fee: 0.003, cdMul: 1.0, mine: 1.0,
     lo: 0.85, hi: 1.15, lead: 6, loyal: true
   },
   degen: {
     n: "梭哈青年", g: "DEGEN",
-    d: "賺賠都放大，一則新聞就能翻身，也能翻船。",
-    tags: ["波動影響 ×2", "召喚 −10%", "手續費 1.5%"],
+    d: "賺賠都放大，一則新聞定生死。",
+    tags: ["$900", "波動 ×2"],
     cash: 900, incMul: 1.0, costMul: 0.9, fee: 0.015, cdMul: 0.9, mine: 0.85,
     lo: 0.5, hi: 1.9, lead: 6
   },
   insider: {
     n: "消息靈通", g: "ALPHA",
-    d: "你比別人早知道消息，也看得到幅度——但情報要花錢。",
-    tags: ["預告 12 秒", "看得到幅度", "手續費 2%"],
+    d: "比別人早知道消息，但情報要錢。",
+    tags: ["$800", "預告 12 秒"],
     cash: 800, incMul: 1.0, costMul: 1.0, fee: 0.02, cdMul: 1.0, mine: 1.0,
     lo: 0.75, hi: 1.4, lead: 12, insight: true
   }

@@ -26,7 +26,7 @@ export default function RoomCode() {
     <div className="roomcode">
       <span className="roomcode-label">房號</span>
       <button className="roomcode-num" onClick={copy} title="按一下複製">{code}</button>
-      <span className="roomcode-hint">{copied ? "已複製" : "把這組號碼給朋友，他們輸入就進得來"}</span>
+      {copied && <span className="roomcode-hint">已複製</span>}
     </div>
   );
 }
