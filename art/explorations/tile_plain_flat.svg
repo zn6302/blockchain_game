@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" shape-rendering="geometricPrecision">
+  <defs>
+    <linearGradient id="fg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#20241B"/>
+      <stop offset="1" stop-color="#14170F"/>
+    </linearGradient>
+  </defs>
+  <path d="M237.02,173.16 L173.16,237.02 L82.84,237.02 L18.98,173.16 L18.98,82.84 L82.84,18.98 L173.16,18.98 L237.02,82.84 Z" fill="url(#fg)" stroke="#A3E635" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M224.08,167.80 L167.80,224.08 L88.20,224.08 L31.92,167.80 L31.92,88.20 L88.20,31.92 L167.80,31.92 L224.08,88.20 Z" fill="none" stroke="#A3E635" stroke-width="1.5" opacity="0.22" stroke-linejoin="round"/>
+  <path d="M209.30,161.68 L161.68,209.30 L94.32,209.30 L46.70,161.68 L46.70,94.32 L94.32,46.70 L161.68,46.70 L209.30,94.32 Z" fill="#191D14" opacity="0.7" stroke="none"/>
+  <line x1="213.00" y1="163.21" x2="237.02" y2="173.16" stroke="#A3E635" stroke-width="2.5" opacity="0.55" stroke-linecap="round"/>
+  <line x1="163.21" y1="213.00" x2="173.16" y2="237.02" stroke="#A3E635" stroke-width="2.5" opacity="0.55" stroke-linecap="round"/>
+  <line x1="92.79" y1="213.00" x2="82.84" y2="237.02" stroke="#A3E635" stroke-width="2.5" opacity="0.55" stroke-linecap="round"/>
+  <line x1="43.00" y1="163.21" x2="18.98" y2="173.16" stroke="#A3E635" stroke-width="2.5" opacity="0.55" stroke-linecap="round"/>
+  <line x1="43.00" y1="92.79" x2="18.98" y2="82.84" stroke="#A3E635" stroke-width="2.5" opacity="0.55" stroke-linecap="round"/>
+  <line x1="92.79" y1="43.00" x2="82.84" y2="18.98" stroke="#A3E635" stroke-width="2.5" opacity="0.55" stroke-linecap="round"/>
+  <line x1="163.21" y1="43.00" x2="173.16" y2="18.98" stroke="#A3E635" stroke-width="2.5" opacity="0.55" stroke-linecap="round"/>
+  <line x1="213.00" y1="92.79" x2="237.02" y2="82.84" stroke="#A3E635" stroke-width="2.5" opacity="0.55" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,17 @@
+{
+  "name": "@noxcat/server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "node src/index.js"
+  },
+  "dependencies": {
+    "@noxcat/shared": "*",
+    "@colyseus/core": "0.18.10",
+    "@colyseus/schema": "5.0.27",
+    "@colyseus/ws-transport": "0.18.2",
+    "express": "4.22.2"
+  }
+}

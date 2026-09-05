@@ -1,0 +1,9 @@
+{
+  "name": "noxcat-arena",
+  "private": true,
+  "workspaces": [
+    "shared",
+    "react-app",
+    "server"
+  ]
+}
