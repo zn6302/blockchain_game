@@ -23,11 +23,9 @@ export default function EntryScreen({ engine }) {
     <div className="ov" id="entryOv">
       <div className="panel" style={{ maxWidth: 520 }}>
         <div className="eyebrow">NOXFLOW</div>
-        <h3>開一間房，或用房號加入朋友</h3>
-        <p className="lead">
-          一場 3 分鐘、最多 4 人。人不夠的座位由電腦接手，
-          <b style={{ color: "var(--lime)" }}>房內任何人按「開始遊戲」就開局</b>。
-        </p>
+        <h3>開房間，或加入你的朋友！</h3>
+        {/* 規則不在這頁講:等待室會再說一次開局條件,這裡只留選房間需要的規格。 */}
+        <div className="entry-meta">3 分鐘 · 最多 4 人 · 空位由電腦補</div>
 
         {S.connectError && <div className="entry-err">{S.connectError}</div>}
         {busy && <div className="entry-busy">連線中…</div>}
@@ -36,7 +34,7 @@ export default function EntryScreen({ engine }) {
           建立房間
         </button>
 
-        <div className="entry-or">或者輸入房號</div>
+        <div className="entry-or">或輸入房號</div>
 
         <form
           className="entry-join"
@@ -56,7 +54,7 @@ export default function EntryScreen({ engine }) {
 
         <div className="foot" style={{ justifyContent: "center", marginTop: 14 }}>
           <button className="btn ghost" disabled={busy} onClick={() => run(() => engine.quickMatch())}>
-            隨機配對（跟正在等的人湊一場）
+            隨機配對
           </button>
         </div>
       </div>

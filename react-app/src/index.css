@@ -413,6 +413,8 @@ svg.map.drag{cursor:grabbing}
 .entry-busy{font-family:var(--mono);font-size:10.5px;letter-spacing:2px;color:var(--lime);
   text-align:center;margin-bottom:11px}
 /* 進場的模式選擇：兩張並排的卡，選中的那張亮綠邊。窄螢幕自己疊成一欄。 */
+.entry-meta{font-family:var(--mono);font-size:10.5px;letter-spacing:.4px;color:var(--muted);
+  margin:0 0 16px}
 .entry-main{width:100%;padding:13px}
 .entry-or{font-family:var(--mono);font-size:9.5px;letter-spacing:2.4px;color:var(--faint);
   text-align:center;margin:15px 0 9px}
