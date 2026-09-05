@@ -1,6 +1,6 @@
 import { Client } from "@colyseus/sdk";
 import { S, resetRoomState } from "./state.js";
-import { COINS } from "./constants.js";
+import { COINS, PLAYER_COLORS } from "./constants.js";
 import { toast } from "./toast.js";
 import { SFX, sfxInit, sfx } from "./audio.js";
 
@@ -73,8 +73,10 @@ export function createEngine() {
 
   function mirrorPlayers(state) {
     S.players = state.players.map(p => ({
-      i: p.i, name: p.name, color: p.color, cls: p.cls, cash: p.cash, start: p.start,
-      alive: p.alive, isBot: p.isBot, sessionId: p.sessionId, auto: p.auto, allin: p.allin,
+      /* 顏色是座位編號的純函數(跟 mapEngine/Dock 用的同一份 PLAYER_COLORS),
+         不必占一條每個人都算得出來的同步欄位。 */
+      i: p.i, name: p.name, color: PLAYER_COLORS[p.i], cls: p.cls, cash: p.cash, start: p.start,
+      alive: p.alive, isBot: p.isBot, sessionId: p.sessionId, allin: p.allin,
       reliefT: p.reliefT, ultCd: p.ultCd, lockT: p.lockT, cd: Object.fromEntries(p.cd),
     }));
     S.myIndex = S.players.findIndex(p => p.sessionId && p.sessionId === S.mySessionId);
@@ -237,11 +239,6 @@ export function createEngine() {
   }
   function settleAll() { room && room.send("settleAll"); }
   function settleGroup(k, coin) { room && room.send("settleGroup", { k, coin }); }
-  function toggleAuto() {
-    const me = S.players[S.myIndex];
-    if (!me) return;
-    room && room.send("setAuto", { mode: me.auto === "sell" ? "hold" : "sell" });
-  }
   function toggleSfx() {
     sfxInit();
     SFX.on = !SFX.on;
@@ -259,6 +256,6 @@ export function createEngine() {
     selectUnit, focusUnit,
     settleOne, settleAll, settleGroup,
     summon, useUlt,
-    toggleAuto, toggleSfx,
+    toggleSfx,
   };
 }

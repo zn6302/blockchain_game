@@ -47,7 +47,6 @@ export function syncState(state, game) {
     sp.cash = p.cash;
     sp.start = p.start;
     sp.alive = p.alive;
-    sp.auto = p.auto;
     sp.allin = p.allin;
     sp.reliefT = p.reliefT || 0;
     sp.ultCd = p.ultCd || 0;

@@ -59,12 +59,6 @@ export class ArenaRoom extends Room {
       this.forSeat(client, pi => this.game.settleGroup(pi, msg && msg.k, msg && msg.coin)));
     this.onMessage("settleAll", (client) =>
       this.forSeat(client, pi => this.game.settleAll(pi)));
-    this.onMessage("setAuto", (client, msg) =>
-      this.forSeat(client, pi => {
-        const p = this.game.S.players[pi];
-        if (p) p.auto = (msg && msg.mode === "hold") ? "hold" : "sell";
-      }));
-
     /* 沒有倒數自動開局:有房號以後大家是「約好了才進來」,倒數只會在人到齊前
        就把比賽開掉。開局時機改成房內任何一個人按「開始遊戲」,或四個真人都到齊。 */
   }
