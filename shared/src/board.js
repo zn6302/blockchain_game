@@ -55,6 +55,15 @@ export const ZINFO={
   forest  :{t:"森林",     s:"WOODS",    yield:0,coin:null,elev:5},
   waste   :{t:"廢棄鏈",   s:"EMPTY",    yield:0,coin:null,elev:2}
 };
+/* 簡化版只有一種幣，所以三種礦區的差別純粹是產量高低，名字也直接寫產量——
+   完整版那種「這格產哪種幣」的判斷在簡化版不存在。地形本身（elev/外觀）不變。 */
+export const SIMPLE_ZINFO={
+  ...ZINFO,
+  mine_NOX :{...ZINFO.mine_NOX, t:"大礦坑", s:"+$13/s", coin:"NOX"},
+  mine_KIBB:{...ZINFO.mine_KIBB,t:"礦場",   s:"+$9/s",  coin:"NOX"},
+  vault    :{...ZINFO.vault,    t:"小礦區", s:"+$6/s",  coin:"NOX"}
+};
+export function zinfoFor(mode){ return mode==="simple"?SIMPLE_ZINFO:ZINFO; }
 export const ZMAP={};                                   // "q,r" → 索引（避免每幀 find）
 ZONES.forEach((z,i)=>{ZMAP[z[0]+","+z[1]]=i;});
 export const ZELEV=ZONES.map((z,i)=>{                   // 每格再加一點高低起伏

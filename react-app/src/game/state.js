@@ -1,4 +1,4 @@
-import { COINS } from "./constants.js";
+import { COINS, applyMode } from "./constants.js";
 import * as derived from "@noxcat/shared/derived.js";
 
 /* ============================ 狀態 ============================ */
@@ -10,6 +10,7 @@ export const S = {
   connected: false, connectError: null,
   roomCode: "",                     // 目前這間房的房號(伺服器 state.code)
   mySessionId: null, myIndex: null,
+  mode: "full", unlocked: true,      // 這局的模式與「戰鬥兵是否已解鎖」(簡化版才會是 false)
   t: 180, running: false, sel: null, selU: null,
   units: [], players: [], over: false,
   evtT: 10, pending: null, trend: null, hint: "", fx: [],
@@ -23,6 +24,7 @@ export function resetRoomState() {
   Object.assign(S, {
     phase: "entry", connected: false, connectError: null, roomCode: "",
     mySessionId: null, myIndex: null,
+    mode: "full", unlocked: true,
     t: 180, running: false, selU: null,
     units: [], players: [], over: false,
     evtT: 10, pending: null, trend: null, hint: "", fx: [],
@@ -30,7 +32,17 @@ export function resetRoomState() {
   });
 }
 
-const ctx = { S, COINS };
+const ctx = { S, COINS, mode: "full" };
+
+/* 模式是整局不變的,由伺服器在 state 裡告訴我們。ctx.mode 決定 derived.js 要用
+   哪一份兵種表/礦區表,constants.js 那邊則換掉元件直接讀的 UNITS/ZINFO/CK。 */
+export function setMode(mode) {
+  const next = mode === "simple" ? "simple" : "full";
+  S.mode = next;
+  ctx.mode = next;
+  applyMode(next);
+}
+export const isSimpleMode = () => ctx.mode === "simple";
 
 /* 把 shared/derived.js 的 ctx-bound 函式綁回原本零參數(除了 unit/player 本身)的呼叫方式,
    讓元件們完全不用改呼叫端。 */
@@ -50,7 +62,7 @@ export const cdMulOf = (p) => derived.cdMulOf(ctx, p);
 export const packOf = derived.packOf;
 export const unitCost = (k, p) => derived.unitCost(ctx, k, p);
 export const costOf = (k, p) => derived.costOf(ctx, k, p);
-export const qtyOf = derived.qtyOf;
+export const qtyOf = (k, p) => derived.qtyOf(ctx, k, p);
 export const settleValue = (u) => derived.settleValue(ctx, u);
 export const BASE_INCOME = derived.BASE_INCOME;
 export const rankF = derived.rankF;
@@ -64,6 +76,6 @@ export const mineRank = (u) => derived.mineRank(ctx, u);
 export const mineRate = (u) => derived.mineRate(ctx, u);
 
 /* UI 用的衍生資料(原本在 combat.js,現在跟公式一樣共用 shared/derived.js) */
-export const tierOf = derived.tierOf;
+export const tierOf = (k) => derived.tierOf(ctx, k);
 export const unitStatus = (u) => derived.unitStatus(ctx, u);
 export const groupTroops = (mine) => derived.groupTroops(ctx, mine);

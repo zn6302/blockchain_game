@@ -1,6 +1,7 @@
-import { COINS, CK, UNITS, ROSTER, PACK, SPR_OF, ALLIN_MIN, CLASSES, PLAYER_COLORS } from "../game/constants.js";
+import { COINS, CK, UNITS, ZINFO, ROSTER, PACK, SPR_OF, ALLIN_MIN, CLASSES, PLAYER_COLORS } from "../game/constants.js";
+import { isLocked, lockLeft } from "@noxcat/shared/constants.js";
 import { SPRITES } from "../game/sprites.js";
-import { ZONES, ZINFO } from "@noxcat/shared/board.js";
+import { ZONES } from "@noxcat/shared/board.js";
 import { S, money, posValue, unitWorth, settleValue, costOf, cdMulOf, BASE_INCOME, catchUpMul, groupTroops } from "../game/state.js";
 import { useEngineVersion } from "../hooks/useEngineStore.js";
 
@@ -11,6 +12,11 @@ function TargetLine() {
     return <>已選部隊：<b>{UNITS[u.k].n}</b>（現在值 {money(posValue(u))} 的 {u.coin}
       <span style={{ color: pl >= 0 ? "var(--up)" : "var(--down)" }}>{pl >= 0 ? "▲" : "▼"}{Math.abs(pl).toFixed(1)}%</span>）
       — 按「結算」撤回換成 Cash</>;
+  }
+  /* 簡化版不用選格子，貓自己找路，所以這一行改成講解鎖狀態，不講目標格。 */
+  if (S.mode === "simple") {
+    if (!S.unlocked) return <>前 <b>60 秒</b>只能挖礦攢錢 — <b style={{ color: "var(--lime)" }}>{lockLeft(S.t)} 秒</b>後解鎖士兵、刺客、巨獸</>;
+    return <>貓咪會自己找路 — 礦工去人少的礦區，戰鬥兵去打第一名。點自己的部隊可以結算</>;
   }
   if (S.sel == null) return <>目標區域：<b>未選擇</b> — 點地圖選格子；點自己的部隊可以結算</>;
   const z = ZINFO[ZONES[S.sel][2]];
@@ -106,13 +112,14 @@ export default function Dock({ engine }) {
           {ROSTER.map((k, i) => {
             const u = UNITS[k], c = COINS[u.coin];
             const cd = p.cd[k] || 0, cost = costOf(k, p), dead = c.price <= 0.002, isT = (k === "titan");
-            const off = dead || !p.alive || (isT ? (p.allin || p.cash < ALLIN_MIN) : (cd > 0 || p.cash < cost));
+            const lock = isLocked(S.mode, k, S.t);          // 簡化版前 60 秒的戰鬥兵
+            const off = lock || dead || !p.alive || (isT ? (p.allin || p.cash < ALLIN_MIN) : (cd > 0 || p.cash < cost));
             const poor = !isT && p.cash < cost && cd <= 0;
             const evt = evc === u.coin && !dead;
             const full = u.cd * cdMulOf(p) || 1;
             const firing = S.flashKey === k && now < S.flashUntil;
             return (
-              <button className={`u ${off ? "off" : ""} ${dead ? "rug" : ""} ${poor ? "poor" : ""} ${evt ? "evt" : ""} ${firing ? "fire" : ""}`}
+              <button className={`u ${off ? "off" : ""} ${lock ? "lock" : ""} ${dead ? "rug" : ""} ${poor ? "poor" : ""} ${evt ? "evt" : ""} ${firing ? "fire" : ""}`}
                 data-u={k} key={k} style={evt ? { color: c.hex } : undefined}
                 onPointerDown={(e) => { e.preventDefault(); engine.summon(k); }}>
                 <i className="cstrip" style={{ background: c.hex }}></i>
@@ -123,6 +130,7 @@ export default function Dock({ engine }) {
                 <div className="cd" style={cd > 0 ? { display: "flex", height: Math.min(100, cd / full * 100) + "%" } : { display: "none" }}>
                   {cd > 0 ? cd.toFixed(1) : ""}
                 </div>
+                {lock && <div className="lk"><span>🔒</span><b>{lockLeft(S.t)}s</b></div>}
               </button>
             );
           })}

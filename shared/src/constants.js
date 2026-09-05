@@ -6,12 +6,22 @@ const COIN_DEFS = {
   CATN: { name: "貓薄荷幣", sub: "CATN · 中波動 · 後期強", price: 12.4, vol: 0.008, hex: "#4FD1C5" },
   MEOW: { name: "喵喵迷因幣", sub: "MEOW · 高波動 · 可能歸零", price: 3.2, vol: 0.022, hex: "#F5A524" }
 };
+/* 簡化版：全場只有一種幣，波動大到看得出漲跌，但不會有「押錯幣種」這件事。 */
+const SIMPLE_COIN_DEFS = {
+  NOX: { name: "NOXCAT", sub: "NOX · 會漲會跌", price: 3.2, vol: 0.02, hex: "#A3E635" }
+};
+
+export const MODES = ["full", "simple"];
+export const isSimple = (mode) => mode === "simple";
+export function coinDefsFor(mode) { return isSimple(mode) ? SIMPLE_COIN_DEFS : COIN_DEFS; }
+export function coinKeysFor(mode) { return Object.keys(coinDefsFor(mode)); }
+
 export const CK = Object.keys(COIN_DEFS);
-export function createCoins() {
-  const coins = {};
-  CK.forEach(k => {
-    const price = COIN_DEFS[k].price;
-    coins[k] = { ...COIN_DEFS[k], ref: price, hist: Array.from({ length: 40 }, () => price) };
+export function createCoins(mode) {
+  const defs = coinDefsFor(mode), coins = {};
+  Object.keys(defs).forEach(k => {
+    const price = defs[k].price;
+    coins[k] = { ...defs[k], ref: price, hist: Array.from({ length: 40 }, () => price) };
   });
   return coins;
 }
@@ -30,10 +40,33 @@ export const UNITS = {
   titan: { g: "獸", n: "巨獸", coin: "NOX", qty: 0, hp: 600, atk: 46, rng: 40, spd: 24, cd: 0, role: "hunt" }
 };
 
+/* 簡化版的兵種：數值與完整版相同，差別只有兩點——
+   1. 全部綁 NOX（只有一種幣），qty 重新配過，維持「由便宜到貴」的同一條升級曲線
+   2. 戰鬥兵掛 late:true，前 60 秒鎖住，逼玩家先學會挖礦攢錢再開打 */
+export const SIMPLE_UNITS = {
+  miner: { g: "礦", n: "礦工", coin: "NOX", qty: 14.4, hp: 38, atk: 3, rng: 26, spd: 26, cd: 0.6, rate: 0.45, role: "mine" },
+  soldier: { g: "兵", n: "士兵", coin: "NOX", qty: 22.2, hp: 80, atk: 10, rng: 34, spd: 36, cd: 0.7, role: "hunt", late: true },
+  guard: { g: "守", n: "守衛", coin: "NOX", qty: 31.3, hp: 150, atk: 7, rng: 32, spd: 20, cd: 1.1, role: "hold" },
+  assassin: { g: "刺", n: "刺客", coin: "NOX", qty: 34.7, hp: 48, atk: 20, rng: 26, spd: 62, cd: 1.5, role: "hunt", late: true },
+  pro: { g: "超", n: "超級礦工", coin: "NOX", qty: 42.5, hp: 65, atk: 4, rng: 28, spd: 22, cd: 1.4, rate: 1.2, role: "mine" },
+  para: { g: "傘", n: "傘兵", coin: "NOX", qty: 46, hp: 90, atk: 12, rng: 34, spd: 40, cd: 3.0, role: "drop" },
+  titan: { g: "獸", n: "巨獸", coin: "NOX", qty: 0, hp: 600, atk: 46, rng: 40, spd: 24, cd: 0, role: "hunt", late: true }
+};
+export function unitsFor(mode) { return isSimple(mode) ? SIMPLE_UNITS : UNITS; }
+
+/* 一局 180 秒，S.t 是倒數，所以 t > 120 就是「開場那 60 秒」。 */
+export const LATE_T = 120;
+export function isLocked(mode, k, t) {
+  return isSimple(mode) && !!unitsFor(mode)[k]?.late && t > LATE_T;
+}
+export function lockLeft(t) { return Math.max(0, Math.ceil(t - LATE_T)); }
+
 export const PCOL = ["w", "c", "o", "p"];
 export const ROSTER = ["miner", "soldier", "guard", "assassin", "pro", "titan"]; // 由便宜到貴排，越右邊越強
 export const SPR_OF = { miner: "miner", guard: "guard", soldier: "soldier", assassin: "assassin", pro: "pro", titan: "titan" }; // 第六格＝來個大的
 export const COIN_UNITS = { NOX: "超級礦工・巨獸", MEOW: "士兵・刺客", CATN: "礦工・守衛" };
+const SIMPLE_COIN_UNITS = { NOX: "所有貓咪" };
+export function coinUnitsFor(mode) { return isSimple(mode) ? SIMPLE_COIN_UNITS : COIN_UNITS; }
 export const ALLIN_MIN = 300;
 
 /* 身份＝現實中不同的投資人處境：錢從哪來、有多少本金、承受得住多大波動 */

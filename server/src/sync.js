@@ -1,4 +1,3 @@
-import { CK } from "@noxcat/shared/constants.js";
 import { CoinState, MarketEventState, TrendState, UnitState } from "./schema/GameState.js";
 
 /**
@@ -12,8 +11,10 @@ export function syncState(state, game) {
   state.running = S.running;
   state.evtT = S.evtT;
   state.hint = S.hint;
+  state.unlocked = !!S.unlocked;
 
-  CK.forEach(k => {
+  /* 幣種直接看這局的 COINS 有哪些鍵——簡化版只有 NOX,完整版三種。 */
+  Object.keys(COINS).forEach(k => {
     let c = state.coins.get(k);
     if (!c) { c = new CoinState(); state.coins.set(k, c); }
     c.price = COINS[k].price;

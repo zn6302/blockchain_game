@@ -135,6 +135,13 @@ svg.map.drag{cursor:grabbing}
   width:0;animation:chg .7s linear forwards}
 @keyframes chg{to{width:100%}}
 .u.charging{border-color:var(--lime)}
+/* 簡化版前 60 秒鎖住的戰鬥兵：整張卡蓋一層暗罩＋鎖頭與倒數秒數。
+   刻意不用 .off 的半透明，卡片本身要看得清楚（讓玩家先認得這隻是什麼）。 */
+.u .lk{position:absolute;inset:0;background:linear-gradient(rgba(4,6,4,.45),rgba(4,6,4,.86));
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:1px;padding-bottom:6px}
+.u .lk span{font-size:14px;line-height:1;filter:grayscale(1);opacity:.9}
+.u .lk b{font-family:var(--mono);font-size:12px;font-weight:700;color:#E8EDE3}
+.u.lock{opacity:1}
 .u.rug{opacity:.32}
 .u.rug::before{content:"歸零";position:absolute;inset:auto 0 34%;text-align:center;
   font-family:var(--pixel);font-size:8px;color:#F2555A;letter-spacing:1px}
@@ -447,6 +454,18 @@ svg.map.drag{cursor:grabbing}
 .roomcode-hint{font-size:10.5px;color:var(--muted);margin-left:auto}
 .entry-err{background:rgba(242,85,90,.12);border:1px solid var(--down);color:var(--down);
   border-radius:10px;padding:9px 12px;font-size:11.5px;line-height:1.5;margin-bottom:13px}
+.entry-busy{font-family:var(--mono);font-size:10.5px;letter-spacing:2px;color:var(--lime);
+  text-align:center;margin-bottom:11px}
+/* 進場的模式選擇：兩張並排的卡，選中的那張亮綠邊。 */
+.modepick{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 10px}
+.mp{display:flex;flex-direction:column;gap:3px;text-align:left;padding:10px 11px;cursor:pointer;
+  background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:10px;color:var(--muted)}
+.mp:hover{border-color:var(--faint)}
+.mp b{font-size:13px;color:var(--txt)}
+.mp span{font-size:10.5px;line-height:1.45}
+.mp.on{border-color:var(--lime);background:rgba(163,230,53,.10)}
+.mp.on b{color:var(--lime)}
+@media (max-width:520px){.modepick{grid-template-columns:1fr}}
 .entry-main{width:100%;padding:13px}
 .entry-or{font-family:var(--mono);font-size:9.5px;letter-spacing:2.4px;color:var(--faint);
   text-align:center;margin:15px 0 9px}

@@ -1,6 +1,6 @@
 import { SPRITES } from "./sprites.js";
-import { UNITS, COINS, PLAYER_COLORS, PCOL, SPR_OF } from "./constants.js";
-import { ZONES, ZINFO, HEXR, KY, hexXY, isoPts, tileSVG, PS } from "@noxcat/shared/board.js";
+import { UNITS, COINS, ZINFO, PLAYER_COLORS, PCOL, SPR_OF } from "./constants.js";
+import { ZONES, HEXR, KY, hexXY, isoPts, tileSVG, PS } from "@noxcat/shared/board.js";
 import { S, clamp, sizeMul } from "./state.js";
 
 /* ---------------- 場景帶（前景遮擋） ---------------- */

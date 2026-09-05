@@ -72,6 +72,8 @@ export const GameState = schema({
   evtT: t.number().default(10),
   hint: t.string().default(""),
   code: t.string().default(""),         // 房號,建房時由 client 產生並當成 filterBy 的鍵
+  mode: t.string().default("full"),     // "full" | "simple",建房時決定,整局不變
+  unlocked: t.boolean().default(true),  // 簡化版前 60 秒鎖戰鬥兵;完整版恆為 true
   coins: t.map(CoinState),
   units: t.array(UnitState),
   players: t.array(PlayerState),
