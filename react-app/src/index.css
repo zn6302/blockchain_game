@@ -146,10 +146,14 @@ svg.map.drag{cursor:grabbing}
   border:1px solid var(--line);border-radius:20px;padding:6px 12px}
 .legend i{display:inline-block;width:7px;height:7px;border-radius:2px;margin-right:5px}
 
-/* 事件卡的殼：桌機 display:contents，事件卡照舊浮在地圖上 */
-.ctxstrip{display:contents}
-.evtbar{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:6;display:none;
-  min-width:min(420px,84%);max-width:min(560px,90%);background:rgba(9,13,9,.95);
+/* 頂部資訊層：事件卡在上、提示條在下。
+   事件卡的高度是內容撐開的(趨勢期多一條進度條、說明還會換行)，提示條要是自己
+   寫死 top，一長就會壓上去——所以兩條的間距一律交給版型算，不用魔術數字。
+   桌機／橫式是浮在地圖上的一個 flex 直欄；手機直式見下面 min-height:561 那段。 */
+.ctxstrip{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:6;
+  width:min(560px,90%);display:flex;flex-direction:column;align-items:center;gap:8px;
+  pointer-events:none}
+.evtbar{width:100%;display:none;background:rgba(9,13,9,.95);
   border:1px solid var(--line);border-radius:12px;padding:8px 13px 9px;box-shadow:0 8px 26px rgba(0,0,0,.5)}
 .evtbar.on{display:block}
 .evtbar .ehead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
@@ -158,11 +162,11 @@ svg.map.drag{cursor:grabbing}
 .evtbar .esub{font-size:10.5px;color:var(--muted);margin-top:3px;line-height:1.4}
 .evtbar .ebar{height:3px;border-radius:2px;background:#0C0F0B;margin-top:7px;overflow:hidden}
 .evtbar .ebar i{display:block;height:100%}
-.toast{position:absolute;left:50%;top:64px;transform:translateX(-50%) translateY(-6px);z-index:6;
-  max-width:min(560px,86%);background:rgba(9,13,9,.94);border:1px solid var(--line);border-radius:12px;
+.toast{max-width:100%;transform:translateY(-6px);
+  background:rgba(9,13,9,.94);border:1px solid var(--line);border-radius:12px;
   padding:8px 14px;font-size:11.5px;line-height:1.45;color:var(--txt);opacity:0;pointer-events:none;
   transition:opacity .22s ease, transform .22s ease;box-shadow:0 8px 26px rgba(0,0,0,.5)}
-.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.on{opacity:1;transform:none}
 .toast.warn{border-color:rgba(245,165,36,.55)}
 .toast.bad{border-color:rgba(242,85,90,.55)}
 
@@ -514,10 +518,10 @@ svg.map.drag{cursor:grabbing}
   .zoomctl{top:8px;right:8px;bottom:auto;transform:none;flex-direction:row;gap:5px}
   .zoomctl button{width:36px;height:36px;font-size:13px}
   .zoomctl .zbtn{display:none}                       /* 手機用雙指縮放就好 */
-  .evtbar{top:8px;left:8px;right:auto;min-width:0;max-width:calc(100% - 106px);transform:none;padding:6px 10px 7px}
+  .ctxstrip{top:8px;left:8px;right:8px;width:auto;transform:none;align-items:stretch;gap:6px}
+  .evtbar{max-width:calc(100% - 98px);padding:6px 10px 7px}   /* 讓開右上角的縮放／音效鍵 */
   .evtbar .ehead{font-size:11px}.evtbar .eco{font-size:11px}.evtbar .esub{font-size:9.5px}
-  .toast{top:74px;left:8px;right:8px;max-width:none;transform:translateY(-6px);font-size:10.5px;padding:6px 11px}
-  .toast.on{transform:none}
+  .toast{max-width:none;font-size:10.5px;padding:6px 11px}
   /* 操作列在直式手機疊成好幾列:現金＋行情一列、召喚卡一列、大招一列、結算一列 */
   .dock{left:6px;right:6px;bottom:6px;transform:none;max-width:none;flex-direction:column;
     gap:6px;padding:7px 8px;border-radius:13px}
@@ -598,11 +602,15 @@ svg.map.drag{cursor:grabbing}
   .stage{display:flex;flex-direction:column}
   .mapwrap{position:relative;inset:auto;flex:1 1 auto;min-height:0}
   /* 底線掛在事件卡自己身上：沒有事件時整條收成 0，地圖頂端不會留一條線 */
-  .ctxstrip{display:block;order:-1;flex:none;position:relative;z-index:6}
-  .evtbar{position:static;transform:none;min-width:0;max-width:none;
+  .ctxstrip{display:block;order:-1;flex:none;position:relative;z-index:6;
+    top:auto;left:auto;right:auto;width:auto;transform:none}
+  .evtbar{max-width:none;
     border:0;border-bottom:1px solid var(--line);border-radius:0;box-shadow:none;
     background:rgba(9,13,9,.96);padding:7px 11px 8px}
   .evtbar .eco{display:none}                         /* 幣價下面行情列已經有一份 */
+  /* 提示條浮在那條的正下方：top:100% 跟著它的實際高度走(換行、進度條都算進去)，
+     沒有事件時那條收成 0，提示條自然就貼到地圖頂端。 */
+  .toast{position:absolute;top:100%;left:8px;right:8px;margin-top:8px;max-width:none}
   .zoomctl{display:none}                             /* ⌂／音效搬去倒數旁邊了 */
 
   /* ③ 操作列拿掉自己的外框，改成地圖底部的漸層——盒中盒少一層 */
@@ -683,11 +691,12 @@ svg.map.drag{cursor:grabbing}
   .zoomctl{top:50%;bottom:auto;right:6px;transform:translateY(-60%);flex-direction:column;gap:4px}
   .zoomctl button{width:30px;height:30px;font-size:12px}
   .zoomctl .zbtn{display:none}
-  .evtbar{top:6px;left:6px;right:auto;transform:none;min-width:0;max-width:calc(100% - 46px);padding:5px 9px 6px}
+  .ctxstrip{top:6px;left:6px;right:auto;width:calc(100% - 46px);transform:none;
+    align-items:flex-start;gap:5px}
+  .evtbar{width:auto;max-width:100%;padding:5px 9px 6px}
   .evtbar .ehead{font-size:10.5px}.evtbar .eco{font-size:10.5px}.evtbar .esub{font-size:9px}
   .evtbar .ebar{margin-top:4px}
-  .toast{top:6px;left:6px;right:auto;transform:none;max-width:calc(100% - 46px);font-size:10px;padding:5px 9px}
-  .toast.on{transform:none}
+  .toast{max-width:100%;font-size:10px;padding:5px 9px}
   /* overlay 畫面：橫式的高度是瓶頸，面板自己捲 */
   .panel{padding:12px 14px 12px;max-height:92vh;max-height:92dvh;overflow-y:auto;overscroll-behavior:contain}
   .panel h3{font-size:16px;margin-bottom:2px}

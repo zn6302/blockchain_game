@@ -72,13 +72,13 @@ export default function MapStage({ engine }) {
         <button title="音效" className={SFX.on ? "on" : ""} onClick={() => engine.toggleSfx()}>{SFX.on ? "🔊" : "🔇"}</button>
       </div>
       <div className={`intro ${introOn ? "on" : ""}`} id="intro">這是你的基地</div>
-      {/* 手機直式:事件卡不再蓋住地圖左上角,改成貼齊地圖上緣的一整條;
-          沒有事件時整條收成 0,地圖吃滿。桌機 .ctxstrip 是 display:contents,
-          事件卡照舊浮在地圖上。 */}
+      {/* 頂部資訊層:事件卡＋提示條。手機直式時事件卡是貼齊地圖上緣的一整條
+          (沒有事件就收成 0,地圖吃滿);桌機／橫式則是浮在地圖上的一個 flex 直欄。
+          兩種情況提示條都跟著事件卡的實際高度走,不自己算 top。 */}
       <div className="ctxstrip">
         <EventBar engine={engine} />
+        <Toast />
       </div>
-      <Toast />
       <UltCast engine={engine} />
 
       <TroopPanel engine={engine} />
