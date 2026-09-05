@@ -56,25 +56,17 @@ export const ZONES=(()=>{
 export const NOTALL=ZONES.NOTALL;                 // 這些格子不放高聳的前景物
 /* 高低差刻意壓得很平：舊版的山高 20、金庫 −11，等角投影下前排整個擋住後排，
    而且鏡頭一拉遠就變成一堆柱子。新版把落差縮到 ±8 以內，看得出地勢但不擋路。 */
+/* 全場只有一種幣，所以三種礦區的差別純粹是產量高低，名字也直接寫產量。 */
 export const ZINFO={
   base    :{t:"基地",     s:"HOME",     yield:0,coin:null,elev:4},
   exchange:{t:"交易所",   s:"FEE -50%", yield:0,coin:null,elev:2},
-  mine_NOX:{t:"迷因幣礦坑",s:"HIGH RISK",yield:13,coin:"MEOW",elev:0},
-  mine_KIBB:{t:"貓薄荷田",s:"STEADY",   yield:9,coin:"CATN",elev:0},
-  vault   :{t:"NOXCAT 金庫",s:"STABLE",  yield:6,coin:"NOX",elev:-5},
+  mine_NOX:{t:"大礦坑",   s:"+$13/s",   yield:13,coin:"NOX",elev:0},
+  mine_KIBB:{t:"礦場",    s:"+$9/s",    yield:9,coin:"NOX",elev:0},
+  vault   :{t:"小礦區",   s:"+$6/s",    yield:6,coin:"NOX",elev:-5},
   mountain:{t:"能源峰",   s:"COOLDOWN", yield:0,coin:null,elev:8},
   forest  :{t:"森林",     s:"WOODS",    yield:0,coin:null,elev:2},
   waste   :{t:"廢棄鏈",   s:"EMPTY",    yield:0,coin:null,elev:1}
 };
-/* 簡化版只有一種幣，所以三種礦區的差別純粹是產量高低，名字也直接寫產量——
-   完整版那種「這格產哪種幣」的判斷在簡化版不存在。地形本身（elev/外觀）不變。 */
-export const SIMPLE_ZINFO={
-  ...ZINFO,
-  mine_NOX :{...ZINFO.mine_NOX, t:"大礦坑", s:"+$13/s", coin:"NOX"},
-  mine_KIBB:{...ZINFO.mine_KIBB,t:"礦場",   s:"+$9/s",  coin:"NOX"},
-  vault    :{...ZINFO.vault,    t:"小礦區", s:"+$6/s",  coin:"NOX"}
-};
-export function zinfoFor(mode){ return mode==="simple"?SIMPLE_ZINFO:ZINFO; }
 export const ZMAP={};                                   // "q,r" → 索引（避免每幀 find）
 ZONES.forEach((z,i)=>{ZMAP[z[0]+","+z[1]]=i;});
 export const ZELEV=ZONES.map((z,i)=>{                   // 每格再加一點高低起伏
@@ -340,9 +332,8 @@ export function pFlag(x,y,h,col){
 }
 
 /* ---------------- 單一地塊的 SVG（供 renderMap 組合整張地圖） ---------------- */
-export function tileSVG(idx,myIndex,mode){
+export function tileSVG(idx,myIndex){
   myIndex=myIndex??0;
-  const simple=(mode==="simple");
   const [q,r,type,owner]=ZONES[idx], z=ZINFO[type], {x,y}=hexXY(q,r);
   const rg=rngFor(idx*97+13);
   const water=(type==="vault");
@@ -410,21 +401,21 @@ export function tileSVG(idx,myIndex,mode){
     add(pFlag(x-34,y-12,24,"#91D500"));
   }else if(type==="mine_NOX"||type==="mine_KIBB"){
     const nox=type==="mine_NOX";
-    // 完整版照幣種分色（迷因幣＝橘、貓薄荷＝青）；簡化版全場同一種幣，改用亮度分產量
-    const col=simple?(nox?"#91D500":"#7FB024"):(nox?"#F5A524":"#4FD1C5");
+    // 全場同一種幣，所以礦區用亮度分產量（亮＝產得多）
+    const col=nox?"#91D500":"#7FB024";
     s+=EL(x+2,y+8,HEXR*0.55,HEXR*0.55*KY,col,.12);          // 地面色圈
     s+=`<ellipse cx="${(x+2).toFixed(1)}" cy="${(y+8).toFixed(1)}" rx="${(HEXR*0.55).toFixed(1)}"
         ry="${(HEXR*0.55*KY).toFixed(1)}" fill="none" stroke="${col}" stroke-width="2"
         stroke-dasharray="${nox?"7 6":"3 5"}" opacity=".55"/>`;
     bd+=pOre(x+2,y+4,col,rg);
     add(pFrame(x-26,y+2,34));
-    add(pSign(x+22,y+15,17,col,simple?(nox?"BIG":"MINE"):(nox?"MEME":"CATN")));
+    add(pSign(x+22,y+15,17,col,nox?"BIG":"MINE"));
     add(pCart(x+8,y+20,8,col));
     for(let i=0;i<3;i++) add(pBoulder(x+rg.f(-40,40),y+rg.f(-14,-2),rg.f(5,8)));
   }else if(type==="vault"){
     add(pPier(x-30,y+14,16));
     add(pVault(x+4,y-2,17));
-    add(pSign(x+26,y+12,15,simple?"#5C8A00":"#91D500","NOX"));
+    add(pSign(x+26,y+12,15,"#5C8A00","NOX"));
   }else if(type==="mountain"){
     add(pRock(x+6,y+10,rg.f(52,64),rg.f(48,60),rg,true));
     add(pRock(x-24,y+16,rg.f(26,36),rg.f(28,36),rg,rg.i(0,2)===0));

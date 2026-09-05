@@ -1,4 +1,4 @@
-import { COINS, applyMode } from "./constants.js";
+import { COINS } from "./constants.js";
 import * as derived from "@noxcat/shared/derived.js";
 
 /* ============================ 狀態 ============================ */
@@ -10,8 +10,8 @@ export const S = {
   connected: false, connectError: null,
   roomCode: "",                     // 目前這間房的房號(伺服器 state.code)
   mySessionId: null, myIndex: null, hostIndex: -1,
-  mode: "full", unlocked: true,      // 這局的模式與「戰鬥兵是否已解鎖」(簡化版才會是 false)
-  t: 180, running: false, sel: null, selU: null,
+  unlocked: false,                  // 戰鬥兵是否已解鎖(開場 60 秒是鎖著的)
+  t: 180, running: false, selU: null,
   units: [], players: [], over: false,
   evtT: 10, pending: null, trend: null, hint: "", fx: [],
   flashKey: null, flashUntil: 0,
@@ -24,7 +24,7 @@ export function resetRoomState() {
   Object.assign(S, {
     phase: "entry", connected: false, connectError: null, roomCode: "",
     mySessionId: null, myIndex: null, hostIndex: -1,
-    mode: "full", unlocked: true,
+    unlocked: false,
     t: 180, running: false, selU: null,
     units: [], players: [], over: false,
     evtT: 10, pending: null, trend: null, hint: "", fx: [],
@@ -32,17 +32,7 @@ export function resetRoomState() {
   });
 }
 
-const ctx = { S, COINS, mode: "full" };
-
-/* 模式是整局不變的,由伺服器在 state 裡告訴我們。ctx.mode 決定 derived.js 要用
-   哪一份兵種表/礦區表,constants.js 那邊則換掉元件直接讀的 UNITS/ZINFO/CK。 */
-export function setMode(mode) {
-  const next = mode === "simple" ? "simple" : "full";
-  S.mode = next;
-  ctx.mode = next;
-  applyMode(next);
-}
-export const isSimpleMode = () => ctx.mode === "simple";
+const ctx = { S, COINS };
 
 /* 把 shared/derived.js 的 ctx-bound 函式綁回原本零參數(除了 unit/player 本身)的呼叫方式,
    讓元件們完全不用改呼叫端。 */

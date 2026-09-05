@@ -1,22 +1,15 @@
-import { CLASSES, PACK, ORDER_ALL, unitsFor } from "./constants.js";
-import { ZONES, hexXY, zinfoFor } from "./board.js";
+import { CLASSES, PACK, ORDER_ALL, UNITS } from "./constants.js";
+import { ZONES, hexXY, ZINFO } from "./board.js";
 
 /**
  * 這裡的函式是遊戲平衡公式(手續費、礦區產出遞減、幣價對戰力的映射...),
  * client(顯示用)跟 server(結算用)都要算出同樣的數字,所以共用同一份,
  * 不是各自維護一份容易兩邊算出不同結果的複製品。
  *
- * 每個函式吃一個 `ctx = {S, COINS, mode}`:
+ * 每個函式吃一個 `ctx = {S, COINS}`:
  *   S      — 該局遊戲的可變狀態(server 端每個房間一個、client 端每個分頁一個)
  *   COINS  — 該局的幣價狀態(同上,一局一份,由 shared/constants.js 的 createCoins() 產生)
- *   mode   — "full" | "simple",決定這局用哪一份兵種表與礦區表
- *
- * 兵種表/礦區表刻意從 ctx 取(而不是 module 頂層 import),因為簡化版跟完整版
- * 的兵種綁定的幣、礦區產的幣都不一樣;同一個 server process 會同時跑兩種模式
- * 的房間,靠 module 層級的常數就會互相污染。
  */
-const U = (ctx) => unitsFor(ctx.mode);
-const ZI = (ctx) => zinfoFor(ctx.mode);
 
 export const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 export const money = (v) => "$" + Math.round(v).toLocaleString();
@@ -45,11 +38,11 @@ export function feeOf(ctx, p) { return CLASSES[p.cls].fee * (hasUnitOn(ctx, p.i,
 export function cdMulOf(ctx, p) { return CLASSES[p.cls].cdMul * (hasUnitOn(ctx, p.i, "mountain") ? 0.75 : 1); }
 export function packOf(k) { return k === "titan" ? 1 : PACK; }          // 一張卡出幾隻
 export function unitCost(ctx, k, p) {                                  // 單隻：幣量 × 當下幣價 × 身份倍率
-  const u = U(ctx)[k];
+  const u = UNITS[k];
   return Math.max(1, u.qty * ctx.COINS[u.coin].price * CLASSES[p.cls].costMul);
 }
 export function costOf(ctx, k, p) { return Math.max(1, Math.round(unitCost(ctx, k, p) * packOf(k))); }
-export function qtyOf(ctx, k, p) { return Math.round(U(ctx)[k].qty * CLASSES[p.cls].costMul * packOf(k)); }
+export function qtyOf(ctx, k, p) { return Math.round(UNITS[k].qty * CLASSES[p.cls].costMul * packOf(k)); }
 export function settleValue(ctx, u) {                                          // 撤回能拿回多少
   const p = ctx.S.players[u.p];
   const v = posValue(ctx, u) * (u.hp / u.hpMax) * (1 + holdBonus(ctx, u)) * (1 - feeOf(ctx, p));
@@ -69,30 +62,30 @@ export function avgWorth(ctx) {
 export function worthRatio(ctx, p) { return netWorth(ctx, p) / (ctx.S.avgW || avgWorth(ctx)); }
 export function catchUpMul(ctx, p) { return clamp(2.2 - 1.5 * worthRatio(ctx, p), 1, 2); }      // 落後 → 收入最多 2×
 export function leadMineMul(ctx, p) { return clamp(1.6 - 0.6 * worthRatio(ctx, p), 0.55, 1.25); } // 領先 → 產能最低 55%
-export function minersIn(ctx, pi, z) { return ctx.S.units.filter(u => u.alive && u.p === pi && u.z === z && U(ctx)[u.k].role === "mine").length; }
+export function minersIn(ctx, pi, z) { return ctx.S.units.filter(u => u.alive && u.p === pi && u.z === z && UNITS[u.k].role === "mine").length; }
 export function mineRank(ctx, u) {
-  const same = ctx.S.units.filter(o => o.alive && o.p === u.p && o.z === u.z && U(ctx)[o.k].role === "mine")
+  const same = ctx.S.units.filter(o => o.alive && o.p === u.p && o.z === u.z && UNITS[o.k].role === "mine")
     .sort((a, b) => a.id - b.id);
   return same.findIndex(o => o.id === u.id);
 }
 export function mineRate(ctx, u) {
-  const zi = ZI(ctx)[ZONES[u.z][2]]; if (!zi.coin || U(ctx)[u.k].role !== "mine") return 0;
+  const zi = ZINFO[ZONES[u.z][2]]; if (!zi.coin || UNITS[u.k].role !== "mine") return 0;
   const p = ctx.S.players[u.p], cls = CLASSES[p.cls];
-  return zi.yield * U(ctx)[u.k].rate * cls.mine * (1 + holdBonus(ctx, u)) * leadMineMul(ctx, p) * rankF(mineRank(ctx, u))
+  return zi.yield * UNITS[u.k].rate * cls.mine * (1 + holdBonus(ctx, u)) * leadMineMul(ctx, p) * rankF(mineRank(ctx, u))
     * powerMul(ctx, u);
 }
 
 /* ============================ UI 用的衍生資料(原本在 combat.js) ============================ */
 export function tierOf(ctx, k) {                              // 三格強度：礦工看產能，戰鬥兵看攻擊
-  const u = U(ctx)[k];
+  const u = UNITS[k];
   if (u.role === "mine") return u.rate >= 1.2 ? 3 : (u.rate >= 0.8 ? 2 : 1);
   return u.atk >= 20 ? 3 : (u.atk >= 10 ? 2 : 1);
 }
 export function unitStatus(ctx, u) {
   if (u.combatT > 0) return ["交戰中", "#F2555A"];
-  const zi = ZI(ctx)[ZONES[u.z][2]];
+  const zi = ZINFO[ZONES[u.z][2]];
   if (!atZone(u)) return ["移動中 → " + zi.t, "#8A9583"];
-  if (U(ctx)[u.k].role === "mine" && zi.coin) {
+  if (UNITS[u.k].role === "mine" && zi.coin) {
     const r = mineRate(ctx, u);
     return ["挖礦 +$" + r.toFixed(1) + "/s" + (r < zi.yield * 0.8 ? "（遞減）" : ""), "#91D500"];
   }
@@ -108,7 +101,7 @@ export function groupTroops(ctx, mine) {                       // 同兵種＋�
     const c = ctx.COINS[u.coin];
     o.pl += (c.price <= 0.002 ? -1 : c.price / u.entry - 1);
     if (u.combatT > 0) o.fight++;
-    else if (U(ctx)[u.k].role === "mine" && ZI(ctx)[ZONES[u.z][2]].coin && atZone(u)) o.mining++;
+    else if (UNITS[u.k].role === "mine" && ZINFO[ZONES[u.z][2]].coin && atZone(u)) o.mining++;
     else if (!atZone(u)) o.moving++;
   });
   return [...g.values()].map(o => {

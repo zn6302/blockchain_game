@@ -302,7 +302,6 @@ svg.map.drag{cursor:grabbing}
 @keyframes plp{0%,100%{opacity:1}50%{opacity:.5}}
 .basetag{font-family:var(--pixel);font-size:8px;letter-spacing:.5px}
 .hex{cursor:pointer}
-.hex.sel .top{stroke:#F2F7EE;stroke-width:3}
 #scene g[data-uid]{cursor:pointer}
 #scene image{image-rendering:pixelated}
 .dmgtxt{font-family:var(--mono);font-size:11px;font-weight:700;text-anchor:middle}
@@ -395,14 +394,6 @@ svg.map.drag{cursor:grabbing}
 .entry-busy{font-family:var(--mono);font-size:10.5px;letter-spacing:2px;color:var(--lime);
   text-align:center;margin-bottom:11px}
 /* 進場的模式選擇：兩張並排的卡，選中的那張亮綠邊。窄螢幕自己疊成一欄。 */
-.modepick{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(180px,100%),1fr));gap:8px;margin:12px 0 10px}
-.mp{display:flex;flex-direction:column;gap:3px;text-align:left;padding:10px 11px;cursor:pointer;
-  background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:10px;color:var(--muted)}
-.mp:hover{border-color:var(--faint)}
-.mp b{font-size:13px;color:var(--txt)}
-.mp span{font-size:10.5px;line-height:1.45}
-.mp.on{border-color:var(--lime);background:rgba(145,213,0,.10)}
-.mp.on b{color:var(--lime)}
 .entry-main{width:100%;padding:13px}
 .entry-or{font-family:var(--mono);font-size:9.5px;letter-spacing:2.4px;color:var(--faint);
   text-align:center;margin:15px 0 9px}

@@ -11,9 +11,6 @@ export default function EntryScreen({ engine }) {
   useEngineVersion(engine);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
-  /* 模式只在「建立房間/隨機配對」時有意義——用房號加入的人是進到別人開的房,
-     那間房是哪種模式在建立時就定死了,所以下面的加入按鈕不帶 mode。 */
-  const [mode, setMode] = useState("full");
 
   const ready = code.length === 4;
   const run = (fn) => {
@@ -35,19 +32,8 @@ export default function EntryScreen({ engine }) {
         {S.connectError && <div className="entry-err">{S.connectError}</div>}
         {busy && <div className="entry-busy">連線中…</div>}
 
-        <div className="modepick">
-          <button type="button" className={`mp ${mode === "full" ? "on" : ""}`} onClick={() => setMode("full")}>
-            <b>完整版</b>
-            <span>三種幣、自己選目標格子</span>
-          </button>
-          <button type="button" className={`mp ${mode === "simple" ? "on" : ""}`} onClick={() => setMode("simple")}>
-            <b>簡化版</b>
-            <span>只有一種幣、貓自己找路、前 60 秒只能挖礦</span>
-          </button>
-        </div>
-
-        <button className="btn entry-main" disabled={busy} onClick={() => run(() => engine.createRoom(null, mode))}>
-          建立{mode === "simple" ? "簡化版" : "完整版"}房間
+        <button className="btn entry-main" disabled={busy} onClick={() => run(() => engine.createRoom())}>
+          建立房間
         </button>
 
         <div className="entry-or">或者輸入房號</div>
@@ -69,7 +55,7 @@ export default function EntryScreen({ engine }) {
         </form>
 
         <div className="foot" style={{ justifyContent: "center", marginTop: 14 }}>
-          <button className="btn ghost" disabled={busy} onClick={() => run(() => engine.quickMatch(null, mode))}>
+          <button className="btn ghost" disabled={busy} onClick={() => run(() => engine.quickMatch())}>
             隨機配對（跟正在等的人湊一場）
           </button>
         </div>

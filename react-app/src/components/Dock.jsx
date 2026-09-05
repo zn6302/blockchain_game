@@ -1,8 +1,7 @@
-import { COINS, CK, UNITS, ZINFO, ROSTER, PACK, SPR_OF, CLASSES, PLAYER_COLORS } from "../game/constants.js";
+import { COINS, CK, UNITS, ROSTER, PACK, SPR_OF, CLASSES, PLAYER_COLORS } from "../game/constants.js";
 import { isLocked, lockLeft, ULTS, ULT_CD } from "@noxcat/shared/constants.js";
 import { SPRITES } from "../game/sprites.js";
 import { CLS_ICON } from "../game/classIcons.js";
-import { ZONES } from "@noxcat/shared/board.js";
 import { S, clamp, money, posValue, unitWorth, costOf, cdMulOf, BASE_INCOME, catchUpMul, groupTroops } from "../game/state.js";
 import { useEngineVersion } from "../hooks/useEngineStore.js";
 import { useMediaQuery, TROOP_PANEL_HIDDEN } from "../hooks/useMediaQuery.js";
@@ -16,14 +15,9 @@ function TargetLine() {
       <span style={{ color: pl >= 0 ? "var(--up)" : "var(--down)" }}>{pl >= 0 ? "▲" : "▼"}{Math.abs(pl).toFixed(1)}%</span>）
       — 按「結算」撤回換成 Cash</>;
   }
-  /* 簡化版不用選格子，貓自己找路，所以這一行改成講解鎖狀態，不講目標格。 */
-  if (S.mode === "simple") {
-    if (!S.unlocked) return <>前 <b>60 秒</b>只能挖礦攢錢 — <b style={{ color: "var(--lime)" }}>{lockLeft(S.t)} 秒</b>後解鎖士兵、刺客與巨獸大招</>;
-    return <>礦工自己會去礦區、士兵自己會去找對手 — 你只要決定<b>買什麼</b>和<b>什麼時候賣</b></>;
-  }
-  if (S.sel == null) return <>目標區域：<b>未選擇</b> — 點地圖選格子；點自己的部隊可以結算</>;
-  const z = ZINFO[ZONES[S.sel][2]];
-  return <>目標：<b>{z.t}</b>{z.coin ? ` · 產出 $${z.yield}/s` : ""} — 部隊從基地走過去，只有傘兵能空降</>;
+  /* 玩家不選格子，貓自己找路，所以這一行講的是解鎖狀態，不是目標格。 */
+  if (!S.unlocked) return <>前 <b>60 秒</b>只能挖礦攢錢 — <b style={{ color: "var(--lime)" }}>{lockLeft(S.t)} 秒</b>後解鎖士兵、刺客與巨獸大招</>;
+  return <>礦工自己會去礦區、士兵自己會去找對手 — 你只要決定<b>買什麼</b>和<b>什麼時候賣</b></>;
 }
 
 /* 走勢線：把一段價格壓進 w×ht 的框裡。剛開場整段是平的，所以給一個最小幅度，
@@ -106,7 +100,7 @@ function UltButton({ engine, p }) {
   const ult = ULTS[p.cls];
   if (!ult) return null;
   const cd = p.ultCd || 0;
-  const locked = p.cls === "degen" && isLocked(S.mode, "titan", S.t);
+  const locked = p.cls === "degen" && isLocked("titan", S.t);
   const poor = p.cash < ult.min;
   const off = !p.alive || cd > 0 || locked || poor;
   const firing = S.flashKey === "ult" && performance.now() < S.flashUntil;
@@ -199,7 +193,7 @@ export default function Dock({ engine }) {
           {ROSTER.map((k, i) => {
             const u = UNITS[k], c = COINS[u.coin];
             const cd = p.cd[k] || 0, cost = costOf(k, p), dead = c.price <= 0.002;
-            const lock = isLocked(S.mode, k, S.t);          // 簡化版前 60 秒的戰鬥兵
+            const lock = isLocked(k, S.t);                  // 開場 60 秒鎖住的戰鬥兵
             const off = lock || dead || !p.alive || cd > 0 || p.cash < cost;
             const poor = p.cash < cost && cd <= 0;
             const evt = evc === u.coin && !dead;
