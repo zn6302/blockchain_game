@@ -81,10 +81,41 @@ export function createGameInstance({ emit }) {
          多人版任何一個人放招都不能影響到別人。 */
       ultCd: 0, lockT: 0, dca: null,
     }));
-    priv = S.players.map(() => ({ stats: freshStats() }));
+    priv = S.players.map(p => ({ stats: freshStats(), tut: p.isBot ? null : freshTut() }));
   }
 
   function log(txt) { /* server 端只印 console,UI 沒有畫面在顯示這個 */ }
+
+  /* ---- 新手教學 ----------------------------------------------------------
+     單機原型是一條 setTimeout 鏈(S.tut),多人版不能這樣寫:每個座位的進度
+     是各自的,而且房間可能在提示送出前就結束,殘留的 timer 會對著已經沒人的
+     座位發訊息。改成每人一個小佇列,計時掛在 step() 上,房間停了就一起停。
+     bot 座位的 tut 是 null,整條鏈自然跳過。 */
+  function freshTut() { return { step: 0, sold: false, q: [] }; }
+  function tutAt(pi, delay, fn) {
+    const t = priv[pi] && priv[pi].tut;
+    if (t) t.q.push({ t: delay, fn });
+  }
+  function tickTut(dt) {
+    S.players.forEach(p => {
+      const t = priv[p.i] && priv[p.i].tut;
+      if (!t || !t.q.length) return;
+      t.q = t.q.filter(item => {
+        item.t -= dt;
+        if (item.t > 0) return true;
+        item.fn();
+        return false;
+      });
+    });
+  }
+  /* 開局第一句。由 ArenaRoom 在 phase 切成 playing 之後才呼叫,
+     早一步送出的話 client 還停在大廳畫面,提示會被切場景蓋掉。 */
+  function startTutorial() {
+    S.players.forEach(p => {
+      if (priv[p.i] && priv[p.i].tut)
+        toast("按下面第一隻 <b>礦工</b> — 這就是花 Cash 買 NOXCAT。", "warn", 5000, p.i);
+    });
+  }
 
   // ---- 特效:視覺上是共用同一張地圖,所以一律 broadcast,不分玩家。
   // 戰鬥密集時每秒會有幾十個 fx/sfx 事件,先攢著,由呼叫端(ArenaRoom)決定多久
@@ -192,6 +223,22 @@ export function createGameInstance({ emit }) {
     for (let i = 0; i < packOf(k); i++) spawn(pi, k, target, false, { coin: u.coin, stake: each });
     priceImpact(u.coin, cost);
     sfx("buy", 1);
+    const tut = priv[pi].tut;
+    if (tut && tut.step === 0) {
+      tut.step = 1;
+      tutAt(pi, 2.6, () =>
+        toast("牠們會自己去挖礦。左下角是<b>幣價</b> — 幣漲你的貓變強變大，幣跌就縮水。", "warn", 5200, pi));
+      /* 已經自己按過結算的人就不用再教這一句了 */
+      tutAt(pi, 11, () => {
+        if (!tut.sold)
+          toast("想把賺到的鎖回 Cash，就點右邊<b>我的部隊</b>下面的「全部結算」。", "warn", 5200, pi);
+      });
+      tutAt(pi, 20, () => {
+        const me = S.players[pi], ult = me && ULTS[me.cls];
+        if (S.running && me && me.alive && ult && !(me.ultCd > 0))
+          toast(`召喚列右邊那顆是你的大招 <b>${ult.n}</b> — ${ult.d}。<b>想用就點它</b>，每 ${ULT_CD} 秒可以放一次。`, "warn", 6000, pi);
+      });
+    }
   }
   /* ALL-IN 現在是梭哈青年的大招,所以受 60 秒冷卻管、不再是「每場一次」。
      bot 沒有大招,還是照舊用 p.allin 那條一次性的路。 */
@@ -258,6 +305,7 @@ export function createGameInstance({ emit }) {
     p.cash += got; u.alive = false;
     fxKill(u.x, u.y, "#F2F7EE"); sfx("sell", 1);
     priceImpact(u.coin, -posValue(u));
+    if (priv[u.p].tut) priv[u.p].tut.sold = true;
     const st = priv[u.p].stats, pct = got / Math.max(1, u.stake) - 1;
     st.sells++; st.realized += got - u.stake; st.holdSum += u.age; st.holdN++;
     const rec = { k: u.k, coin: u.coin, entry: u.entry, exit: COINS[u.coin].price, pct, pl: got - u.stake };
@@ -267,14 +315,23 @@ export function createGameInstance({ emit }) {
     return got;
   }
   function settleAll(pi) {
-    S.units.filter(u => u.alive && u.p === pi).forEach(u => settle(u, true));
+    const mine = S.units.filter(u => u.alive && u.p === pi);
+    /* 按了沒反應最難懂,寧可回一句話說明為什麼沒事發生 */
+    if (!mine.length) {
+      toast("場上沒有你的貓，沒有東西可以賣。先按下面的貓咪召喚。", "warn", 3600, pi); return;
+    }
+    mine.forEach(u => settle(u, true));
   }
   function settleGroup(pi, k, coin) {
     S.units.filter(u => u.alive && u.p === pi && u.k === k && u.coin === coin).forEach(u => settle(u, true));
   }
   function settleOneById(pi, unitId) {
-    const u = S.units.find(x => x.id === unitId && x.alive && x.p === pi);
-    if (u) settle(u, false);
+    const u = unitId == null ? null : S.units.find(x => x.id === unitId && x.alive && x.p === pi);
+    if (!u) {
+      toast("要先選一隻 — 點地圖上你的貓，或點<b>我的部隊</b>那一列（每列右邊的「結」可以直接賣掉整組）", "warn", 4200, pi);
+      return;
+    }
+    settle(u, false);
   }
 
   function leaderIdx() {
@@ -343,6 +400,7 @@ export function createGameInstance({ emit }) {
   function step(dt) {
     S.players.forEach(p => { for (const k in p.cd) p.cd[k] = Math.max(0, p.cd[k] - dt); });
     tickUlts(dt);
+    tickTut(dt);
     marketEvents(dt);
     S.avgW = avgWorth();
 
@@ -544,7 +602,7 @@ export function createGameInstance({ emit }) {
 
   return {
     S, COINS,
-    initPlayers, step, tickPrices, flushEvents,
+    initPlayers, startTutorial, step, tickPrices, flushEvents,
     summon, useUlt, settleAll, settleGroup, settleOneById,
     lessonsFor,
     statsFor: (pi) => priv[pi].stats,
