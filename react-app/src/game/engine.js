@@ -62,7 +62,7 @@ export function createEngine() {
     S.players = state.players.map(p => ({
       i: p.i, name: p.name, color: p.color, cls: p.cls, cash: p.cash, start: p.start,
       alive: p.alive, isBot: p.isBot, sessionId: p.sessionId, auto: p.auto, allin: p.allin,
-      reliefT: p.reliefT, cd: Object.fromEntries(p.cd),
+      reliefT: p.reliefT, ultCd: p.ultCd, lockT: p.lockT, cd: Object.fromEntries(p.cd),
     }));
     S.myIndex = S.players.findIndex(p => p.sessionId && p.sessionId === S.mySessionId);
   }
@@ -202,7 +202,12 @@ export function createEngine() {
     flashUnit(k);
     room && room.send("summon", { k, zone: S.sel });
   }
-  function allIn(k) { room && room.send("allIn", { k, zone: S.sel }); }
+  /* 大招:能不能放、放了會怎樣全部由伺服器判斷,client 只負責把按鈕閃一下,
+     免得同一顆按鈕在本地與伺服器各有一套規則,兩邊對不起來。 */
+  function useUlt() {
+    flashUnit("ult");
+    room && room.send("useUlt");
+  }
   function settleOne() {
     if (S.selU == null) return;
     room && room.send("settleOne", { unitId: S.selU });
@@ -230,7 +235,7 @@ export function createEngine() {
     pickClass, startNow,
     selectTile, selectUnit, focusUnit,
     settleOne, settleAll, settleGroup,
-    summon, allIn,
+    summon, useUlt,
     toggleAuto, toggleSfx,
   };
 }

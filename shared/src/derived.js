@@ -1,4 +1,4 @@
-import { CLASSES, PACK, ROSTER, unitsFor } from "./constants.js";
+import { CLASSES, PACK, ORDER_ALL, unitsFor } from "./constants.js";
 import { ZONES, hexXY, zinfoFor } from "./board.js";
 
 /**
@@ -51,7 +51,10 @@ export function unitCost(ctx, k, p) {                                  // 單隻
 export function costOf(ctx, k, p) { return Math.max(1, Math.round(unitCost(ctx, k, p) * packOf(k))); }
 export function qtyOf(ctx, k, p) { return Math.round(U(ctx)[k].qty * CLASSES[p.cls].costMul * packOf(k)); }
 export function settleValue(ctx, u) {                                          // 撤回能拿回多少
-  return posValue(ctx, u) * (u.hp / u.hpMax) * (1 + holdBonus(ctx, u)) * (1 - feeOf(ctx, ctx.S.players[u.p]));
+  const p = ctx.S.players[u.p];
+  const v = posValue(ctx, u) * (u.hp / u.hpMax) * (1 + holdBonus(ctx, u)) * (1 - feeOf(ctx, p));
+  /* 鎖倉（定存族大招）期間保本：這段時間結算至少拿回本金,虧損不算數。 */
+  return (p && p.lockT > 0) ? Math.max(v, u.stake || 0) : v;
 }
 /* ---- 反雪球：落後補助、領先者遞減、礦區容量 ---- */
 export const BASE_INCOME = 5;              // 基地每秒基礎收入
@@ -113,5 +116,5 @@ export function groupTroops(ctx, mine) {                       // 同兵種＋�
     o.n = n; o.pl = o.pl / n * 100; o.hp = o.hp / n;
     o.sel = o.units.some(u => u.id === ctx.S.selU);
     return o;
-  }).sort((a, b) => ROSTER.indexOf(a.k) - ROSTER.indexOf(b.k));
+  }).sort((a, b) => ORDER_ALL.indexOf(a.k) - ORDER_ALL.indexOf(b.k));
 }

@@ -55,8 +55,8 @@ export class ArenaRoom extends Room {
     });
     this.onMessage("summon", (client, msg) =>
       this.forSeat(client, pi => this.game.summon(pi, msg && msg.k, msg && msg.zone)));
-    this.onMessage("allIn", (client, msg) =>
-      this.forSeat(client, pi => this.game.allIn(pi, msg && msg.k, msg && msg.zone)));
+    this.onMessage("useUlt", (client) =>
+      this.forSeat(client, pi => this.game.useUlt(pi)));
     this.onMessage("settleOne", (client, msg) =>
       this.forSeat(client, pi => this.game.settleOneById(pi, msg && msg.unitId)));
     this.onMessage("settleGroup", (client, msg) =>

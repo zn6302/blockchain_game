@@ -141,7 +141,7 @@ export function createMapView(svgEl, { onTileClick } = {}) {
     });
     const front = order.filter(i => ZONES[i][2] === "exchange");        // 交易所的地塊最後畫，蓋在別塊上面
     const rest = order.filter(i => ZONES[i][2] !== "exchange");
-    const tiles = rest.concat(front).map(idx => tileSVG(idx, S.myIndex ?? 0));
+    const tiles = rest.concat(front).map(idx => tileSVG(idx, S.myIndex ?? 0, S.mode));
     let s = tiles.map(t => t.g).join("");
     PROPS.length = 0;
     tiles.forEach(t => t.props.forEach(pr => PROPS.push(pr)));

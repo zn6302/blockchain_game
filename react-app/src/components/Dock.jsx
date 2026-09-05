@@ -1,6 +1,7 @@
-import { COINS, CK, UNITS, ZINFO, ROSTER, PACK, SPR_OF, ALLIN_MIN, CLASSES, PLAYER_COLORS } from "../game/constants.js";
-import { isLocked, lockLeft } from "@noxcat/shared/constants.js";
+import { COINS, CK, UNITS, ZINFO, ROSTER, PACK, SPR_OF, CLASSES, PLAYER_COLORS } from "../game/constants.js";
+import { isLocked, lockLeft, ULTS, ULT_CD } from "@noxcat/shared/constants.js";
 import { SPRITES } from "../game/sprites.js";
+import { CLS_ICON } from "../game/classIcons.js";
 import { ZONES } from "@noxcat/shared/board.js";
 import { S, money, posValue, unitWorth, settleValue, costOf, cdMulOf, BASE_INCOME, catchUpMul, groupTroops } from "../game/state.js";
 import { useEngineVersion } from "../hooks/useEngineStore.js";
@@ -15,7 +16,7 @@ function TargetLine() {
   }
   /* 簡化版不用選格子，貓自己找路，所以這一行改成講解鎖狀態，不講目標格。 */
   if (S.mode === "simple") {
-    if (!S.unlocked) return <>前 <b>60 秒</b>只能挖礦攢錢 — <b style={{ color: "var(--lime)" }}>{lockLeft(S.t)} 秒</b>後解鎖士兵、刺客、巨獸</>;
+    if (!S.unlocked) return <>前 <b>60 秒</b>只能挖礦攢錢 — <b style={{ color: "var(--lime)" }}>{lockLeft(S.t)} 秒</b>後解鎖士兵、刺客與巨獸大招</>;
     return <>貓咪會自己找路 — 礦工去人少的礦區，戰鬥兵去打第一名。點自己的部隊可以結算</>;
   }
   if (S.sel == null) return <>目標區域：<b>未選擇</b> — 點地圖選格子；點自己的部隊可以結算</>;
@@ -42,6 +43,38 @@ function Ticker() {
   });
 }
 
+/* 大招：每個身份一顆,長得跟召喚卡完全不一樣（一顆有文字說明的長按鈕），
+   因為它不是「再買一隻貓」,而是一個一次性的場上效果。能不能按的判斷跟
+   伺服器 useUlt() 是同一組條件,只是這裡先做給眼睛看,真正的把關在伺服器。 */
+function UltButton({ engine, p }) {
+  const ult = ULTS[p.cls];
+  if (!ult) return null;
+  const cd = p.ultCd || 0;
+  const locked = p.cls === "degen" && isLocked(S.mode, "titan", S.t);
+  const poor = p.cash < ult.min;
+  const off = !p.alive || cd > 0 || locked || poor;
+  const firing = S.flashKey === "ult" && performance.now() < S.flashUntil;
+  const status = cd > 0 ? `冷卻中 · 還要 ${Math.ceil(cd)} 秒`
+    : locked ? `${lockLeft(S.t)} 秒後解鎖`
+      : poor ? `還差 ${money(ult.min - p.cash)}`
+        : `每 ${ULT_CD} 秒一次 · 點我發動`;
+  return (
+    <div className="dockcol ultcol">
+      <span className="lab">每 {ULT_CD} 秒一次</span>
+      <button className={`ultbtn ${off ? "off" : "ready"} ${firing ? "fire" : ""}`} id="ultBtn"
+        onClick={() => engine.useUlt()}>
+        <i className="ucd" style={{ width: cd > 0 ? (cd / ULT_CD * 100).toFixed(1) + "%" : 0 }}></i>
+        <span className="uhead">
+          <img src={CLS_ICON[p.cls]} alt="" />
+          <b>{ult.n}</b><i className="ug">大招 · 6</i>
+        </span>
+        <span className="ud">{ult.d}</span>
+        <span className="us">{status}</span>
+      </button>
+    </div>
+  );
+}
+
 export default function Dock({ engine }) {
   useEngineVersion(engine);
   const p = S.players[S.myIndex];
@@ -50,7 +83,7 @@ export default function Dock({ engine }) {
   const mineUnits = S.units.filter(u => u.alive && u.p === S.myIndex);
   const gs = groupTroops(mineUnits);
 
-  const list = ROSTER.filter(k => k !== "titan" && COINS[UNITS[k].coin].price > 0.002)
+  const list = ROSTER.filter(k => COINS[UNITS[k].coin].price > 0.002)
     .map(k => ({ k, c: costOf(k, p) })).sort((a, b) => a.c - b.c);
   const cheap = list[0];
   const broke = p.alive && !mineUnits.length && cheap && p.cash < cheap.c;
@@ -107,14 +140,14 @@ export default function Dock({ engine }) {
       </div>
       <div className="sep"></div>
       <div className="dockcol">
-        <span className="lab">召喚＝買入 · 1–6　<b id="mecolor" style={{ color: PLAYER_COLORS[S.myIndex] }}>YOU = P{S.myIndex + 1}</b></span>
+        <span className="lab">召喚＝買入 · 1–5　<b id="mecolor" style={{ color: PLAYER_COLORS[S.myIndex] }}>YOU = P{S.myIndex + 1}</b></span>
         <div className="units" id="units">
           {ROSTER.map((k, i) => {
             const u = UNITS[k], c = COINS[u.coin];
-            const cd = p.cd[k] || 0, cost = costOf(k, p), dead = c.price <= 0.002, isT = (k === "titan");
+            const cd = p.cd[k] || 0, cost = costOf(k, p), dead = c.price <= 0.002;
             const lock = isLocked(S.mode, k, S.t);          // 簡化版前 60 秒的戰鬥兵
-            const off = lock || dead || !p.alive || (isT ? (p.allin || p.cash < ALLIN_MIN) : (cd > 0 || p.cash < cost));
-            const poor = !isT && p.cash < cost && cd <= 0;
+            const off = lock || dead || !p.alive || cd > 0 || p.cash < cost;
+            const poor = p.cash < cost && cd <= 0;
             const evt = evc === u.coin && !dead;
             const full = u.cd * cdMulOf(p) || 1;
             const firing = S.flashKey === k && now < S.flashUntil;
@@ -125,8 +158,8 @@ export default function Dock({ engine }) {
                 <i className="cstrip" style={{ background: c.hex }}></i>
                 <span className="k">{i + 1}</span>
                 <img className="uimg" src={SPRITES[SPR_OF[k] || k].w[0]} alt="" />
-                <div className="n">{u.n}{k === "titan" ? "" : <b className="px">×{PACK}</b>}</div>
-                <div className="c">{isT ? (p.allin ? "已用掉" : "ALL-IN") : "$" + cost}</div>
+                <div className="n">{u.n}<b className="px">×{PACK}</b></div>
+                <div className="c">${cost}</div>
                 <div className="cd" style={cd > 0 ? { display: "flex", height: Math.min(100, cd / full * 100) + "%" } : { display: "none" }}>
                   {cd > 0 ? cd.toFixed(1) : ""}
                 </div>
@@ -136,6 +169,8 @@ export default function Dock({ engine }) {
           })}
         </div>
       </div>
+      <div className="sep"></div>
+      <UltButton engine={engine} p={p} />
       <div className="sep"></div>
       <div className="dockcol">
         <span className="lab">結算＝賣出</span>

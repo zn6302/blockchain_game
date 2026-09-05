@@ -47,6 +47,10 @@ export const PlayerState = schema({
   auto: t.string().default("sell"),
   allin: t.boolean().default(false),
   reliefT: t.number().default(4),
+  /* 大招:冷卻剩幾秒、鎖倉剩幾秒。dca 不同步——它只影響伺服器自動幫你買,
+     client 從 cash/場上部隊就看得到結果,不需要多一條每 tick 都在變的欄位。 */
+  ultCd: t.number().default(0),
+  lockT: t.number().default(0),
   cd: t.map("number"),
 }, "PlayerState");
 

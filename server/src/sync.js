@@ -50,6 +50,8 @@ export function syncState(state, game) {
     sp.auto = p.auto;
     sp.allin = p.allin;
     sp.reliefT = p.reliefT || 0;
+    sp.ultCd = p.ultCd || 0;
+    sp.lockT = p.lockT || 0;
     const staleKeys = new Set(sp.cd.keys());
     for (const k in p.cd) { sp.cd.set(k, p.cd[k]); staleKeys.delete(k); }
     staleKeys.forEach(k => sp.cd.delete(k));
