@@ -131,10 +131,11 @@ svg.map.drag{cursor:grabbing}
   font-family:var(--mono);font-weight:600;text-transform:uppercase}
 .market h2{display:none}
 #coins{overflow-y:auto}
-/* 圖例放左上:底部整條都是操作列的地盤,放 bottom-left 在筆電寬度會被壓住 */
-.legend{position:absolute;left:12px;top:12px;display:flex;gap:14px;
+/* 圖例照 reference 放左下角。窄一點的視窗操作列會橫過整個底部,那時候整條圖例
+   直接收起來(見下面的 max-width 區塊),不去跟操作列擠。 */
+.legend{position:absolute;left:14px;bottom:14px;display:flex;gap:10px;
   font-size:9.5px;color:var(--muted);font-family:var(--mono);background:rgba(9,13,9,.7);
-  border:1px solid var(--line);border-radius:20px;padding:6px 14px}
+  border:1px solid var(--line);border-radius:20px;padding:6px 12px}
 .legend i{display:inline-block;width:7px;height:7px;border-radius:2px;margin-right:5px}
 
 .evtbar{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:6;display:none;
@@ -187,17 +188,26 @@ svg.map.drag{cursor:grabbing}
 @keyframes chg{to{width:100%}}
 .u.charging{border-color:var(--lime)}
 /* 簡化版前 60 秒鎖住的戰鬥兵：整張卡蓋一層暗罩＋鎖頭與倒數秒數。
-   刻意不用 .off 的半透明，卡片本身要看得清楚（讓玩家先認得這隻是什麼）。 */
-.u .lk{position:absolute;inset:0;background:linear-gradient(rgba(4,6,4,.45),rgba(4,6,4,.86));
-  display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:1px;padding-bottom:6px}
-.u .lk span{font-size:14px;line-height:1;filter:grayscale(1);opacity:.9}
-.u .lk b{font-family:var(--mono);font-size:12px;font-weight:700;color:#E8EDE3}
+   刻意不用 .off 的半透明，卡片本身要看得清楚（讓玩家先認得這隻是什麼）。
+   鎖頭收在右上角那塊本來就空著的地方（左上角是快捷鍵編號）——置底的話會整個
+   壓在價格上，兩行字疊在一起兩邊都讀不出來，名字與價格要留著給玩家先看懂/先存錢。 */
+.u .lk{position:absolute;inset:0;background:linear-gradient(rgba(4,6,4,.42),rgba(4,6,4,.66));
+  display:flex;align-items:flex-start;justify-content:flex-end;padding:4px 4px 0 0}
+.u .lk .lkb{display:flex;align-items:center;gap:2px;padding:1px 4px;
+  background:rgba(4,6,4,.94);border:1px solid rgba(232,237,227,.22);border-radius:999px}
+.u .lk .lkb i{font-style:normal;font-size:8px;line-height:1;filter:grayscale(1);opacity:.9}
+.u .lk .lkb b{font-family:var(--mono);font-size:9.5px;font-weight:700;line-height:1.4;color:#E8EDE3}
 .u.lock{opacity:1}
 .u.rug{opacity:.32}
 .u.rug::before{content:"歸零";position:absolute;inset:auto 0 34%;text-align:center;
   font-family:var(--pixel);font-size:8px;color:#F2555A;letter-spacing:1px}
-.u.evt{animation:evtp 1s ease-in-out infinite}
-@keyframes evtp{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,0)}50%{box-shadow:0 0 0 2px currentColor}}
+/* 行情事件的呼吸光圈畫在卡片「裡面」(outline + 負 offset)，不是外面的 box-shadow：
+   召喚卡這排是可橫向捲動的(.units 有 overflow-x)，畫在外面的光圈會被捲動容器裁掉
+   上下兩邊,手機上卡片間距又只剩 4–5px,兩張卡的光圈會糊成一條連在一起的黃邊。
+   用 outline 而不是 inset box-shadow,是因為它畫在子元素之上,才不會被卡片頂端那條
+   3px 的幣色 .cstrip 蓋掉半圈。 */
+.u.evt{animation:evtp 1s ease-in-out infinite;outline:2px solid transparent;outline-offset:-2px}
+@keyframes evtp{0%,100%{outline-color:transparent}50%{outline-color:currentColor}}
 
 /* 大招：刻意跟召喚卡長得不一樣——一顆帶文字說明的長按鈕，
    左邊那條 .ucd 是冷卻條（從滿到空），可以放的時候整顆會呼吸。 */
@@ -232,8 +242,6 @@ svg.map.drag{cursor:grabbing}
 .troops #actsCol .a{width:auto;flex:1 1 0;min-width:0;padding:6px 8px}
 .troops #actsCol .a .t{font-size:10.5px}
 .troops #actsCol .a .d{font-size:8.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-/* 三顆並排在 246px 寬的面板裡會擠到看不懂，產出切換自己佔一排 */
-.troops #actsCol .a#autoBtn{flex-basis:100%}
 
 .acts{display:flex;gap:var(--unit-gap);overflow-x:auto;-webkit-overflow-scrolling:touch}
 .a{width:var(--a-w);flex:none;background:var(--panel-2);border:1px solid var(--line);border-radius:11px;
@@ -414,6 +422,9 @@ svg.map.drag{cursor:grabbing}
 /* ---------- 平板／小筆電：右側部隊面板收起來，改用操作列上方的部隊條 ---------- */
 @media (max-width:1240px){
   .ovl{width:230px}
+  /* 置中的操作列到這個寬度就壓到左下角了,圖例收起來——顏色對誰在上方 HUD
+     的四張記分卡上本來就看得到。 */
+  .legend{display:none}
 }
 @media (max-width:1120px){
   /* 這個寬度下,地圖被左右兩塊浮層夾住會太窄,而且縮放鈕會壓到操作列右端。
@@ -426,7 +437,9 @@ svg.map.drag{cursor:grabbing}
     overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:1px}
   .dock .target{bottom:calc(100% + 44px)}
   .zoomctl{top:50%;bottom:auto;transform:translateY(-50%)}
-  .legend{display:none}
+  /* 召喚卡從這裡開始窄到右上角放不下鎖頭＋秒數，留秒數就好；
+     卡片本身的暗罩和灰掉的貓已經在講「還不能買」了。 */
+  .u .lk .lkb i{display:none}
 }
 
 /* ---------- 手機直式 ---------- */
@@ -469,6 +482,7 @@ svg.map.drag{cursor:grabbing}
   .u{padding:5px 3px 4px}
   .u .n{font-size:9px}.u .c{font-size:11px;margin-top:2px}
   .u .k{font-size:7px;top:3px;left:3px}
+  .u .lk{padding:3px 3px 0 0}.u .lk .lkb{padding:0 4px}.u .lk .lkb b{font-size:9px}
   .u .n .px{font-size:8px}
   .a{width:auto;flex:1;min-width:76px;padding:5px 7px;gap:0}
   .a .t{font-size:9.5px}.a .d{display:none}.a .p{font-size:9px}
@@ -537,6 +551,7 @@ svg.map.drag{cursor:grabbing}
   .u .uimg{height:24px}
   .u .n{font-size:8.5px}.u .c{font-size:10.5px;margin-top:2px}
   .u .k{font-size:6.5px;top:2px;left:3px}.u .n .px{font-size:7.5px}
+  .u .lk{padding:2px 3px 0 0}.u .lk .lkb{padding:0 4px}.u .lk .lkb b{font-size:8.5px}
   .a{width:78px;flex:none;min-width:0;padding:4px 6px}
   .a .t{font-size:9px}.a .d{display:none}.a .p{font-size:8.5px}
   .acts{overflow-x:auto}

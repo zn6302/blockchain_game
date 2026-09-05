@@ -73,9 +73,9 @@ export function createGameInstance({ emit }) {
     S.evtT = 10; S.warn = null; S.pending = null; S.trend = null; S.hint = ""; S.avgW = 900;
     S.unlocked = false;
     S.players = seats.map((seat, i) => ({
-      i, color: PLAYER_COLORS[i], isBot: !!seat.isBot, name: seat.name || (seat.isBot ? `電腦 ${i + 1}` : "玩家"),
+      i, isBot: !!seat.isBot, name: seat.name || (seat.isBot ? `電腦 ${i + 1}` : "玩家"),
       cls: seat.cls, cash: CLASSES[seat.cls].cash, start: CLASSES[seat.cls].cash,
-      alive: true, cd: {}, allin: false, auto: "sell", reliefT: 4, incT: 1, aiNext: 1.4 + i * 0.6,
+      alive: true, cd: {}, allin: false, reliefT: 4, incT: 1, aiNext: 1.4 + i * 0.6,
       /* 大招：ultCd 冷卻秒數、lockT 鎖倉剩餘秒數、dca 定期定額進行中的計時器。
          這三個都是「每人一份」——原型是單機版所以寫成全域的 S.lock/S.dca,
          多人版任何一個人放招都不能影響到別人。 */
@@ -437,12 +437,9 @@ export function createGameInstance({ emit }) {
           u.mineT = 1;
           const p = S.players[u.p];
           const usd = mineRate(u);
-          const hold = (p.auto !== "sell" && COINS[u.coin].price > 0.002);
-          if (hold) u.qty += usd / COINS[u.coin].price; else p.cash += usd;
+          p.cash += usd;                     // 單幣玩法只有一種產出方式:挖到就換成 Cash
           u.mineFx = 0.55;
-          const c = COINS[u.coin];
-          fxCoin(u.x, u.y, hold ? "+" + (usd / c.price).toFixed(2) + " " + u.coin : "+$" + usd.toFixed(1),
-            hold ? c.hex : "#91D500");
+          fxCoin(u.x, u.y, "+$" + usd.toFixed(1), "#91D500");
           sfx("coin", 0.55);
         }
       }
