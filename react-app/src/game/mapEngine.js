@@ -53,9 +53,9 @@ const NS = "http://www.w3.org/2000/svg";
  * 把原本整份 IIFE 裡「戰場」相關的模組層級可變狀態（CAM/PROPS/BANDS/UNODES/tipCache 之外的 uframe）
  * 收進這個 factory 的 closure，一場遊戲一個實體。
  */
-export function createMapView(svgEl, { onTileClick } = {}) {
+export function createMapView(svgEl) {
   const $ = (sel) => svgEl.querySelector(sel);
-  const CAM = { x: VBW / 2, y: VBH / 2, z: 1, dragged: false };
+  const CAM = { x: VBW / 2, y: VBH / 2, z: 1 };
   const PROPS = [];
   const BANDS = { min: 0, n: 1, el: [], cache: [] };
   const UNODES = new Map();
@@ -141,7 +141,7 @@ export function createMapView(svgEl, { onTileClick } = {}) {
     });
     const front = order.filter(i => ZONES[i][2] === "exchange");        // 交易所的地塊最後畫，蓋在別塊上面
     const rest = order.filter(i => ZONES[i][2] !== "exchange");
-    const tiles = rest.concat(front).map(idx => tileSVG(idx, S.myIndex ?? 0, S.mode));
+    const tiles = rest.concat(front).map(idx => tileSVG(idx, S.myIndex ?? 0));
     let s = tiles.map(t => t.g).join("");
     PROPS.length = 0;
     tiles.forEach(t => t.props.forEach(pr => PROPS.push(pr)));
@@ -198,10 +198,6 @@ export function createMapView(svgEl, { onTileClick } = {}) {
     svgEl.querySelectorAll(".hex").forEach(g => {
       g.onmouseenter = () => showTip(+g.dataset.z);
       g.onmouseleave = () => { tip.style.display = "none"; };
-    });
-    svgEl.querySelectorAll(".hex").forEach(g => g.onclick = () => {
-      if (CAM.dragged) return;
-      onTileClick && onTileClick(+g.dataset.z);
     });
   }
 
@@ -383,7 +379,7 @@ export function createMapView(svgEl, { onTileClick } = {}) {
     const onDown = e => {
       pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (pts.size === 1) {
-        moved = 0; sx = e.clientX; sy = e.clientY; CAM.dragged = false; svgEl.classList.add("drag");
+        moved = 0; sx = e.clientX; sy = e.clientY; svgEl.classList.add("drag");
         try { svgEl.setPointerCapture(e.pointerId); } catch (_) { }
       }
       if (pts.size === 2) { const a = [...pts.values()]; lastDist = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y); }
@@ -395,17 +391,15 @@ export function createMapView(svgEl, { onTileClick } = {}) {
       if (pts.size === 2) {
         const a = [...pts.values()], d = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y);
         if (lastDist) { CAM.z *= d / lastDist; clampCam(); applyCam(); }
-        lastDist = d; CAM.dragged = true; return;
+        lastDist = d; return;
       }
       const k = 1 / svgScale();
       CAM.x -= (e.clientX - prev.x) * k; CAM.y -= (e.clientY - prev.y) * k;
       moved += Math.abs(e.clientX - prev.x) + Math.abs(e.clientY - prev.y);
-      if (moved > 7) CAM.dragged = true;
       clampCam(); applyCam();
     };
     const onUp = e => {
       pts.delete(e.pointerId); lastDist = 0; svgEl.classList.remove("drag");
-      setTimeout(() => { CAM.dragged = false; }, 60);
     };
     const onWheel = e => {
       e.preventDefault();

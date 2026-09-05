@@ -1,5 +1,5 @@
 import { Client } from "@colyseus/sdk";
-import { S, resetRoomState, setMode } from "./state.js";
+import { S, resetRoomState } from "./state.js";
 import { COINS } from "./constants.js";
 import { toast } from "./toast.js";
 import { SFX, sfxInit, sfx } from "./audio.js";
@@ -30,9 +30,8 @@ function wsEndpoint() {
    房號就是伺服器 filterBy(["code"]) 用的鍵:同一個 code 才會配到同一間房。
    建房用 joinOrCreate 而不是 create——萬一兩個人剛好抽到同一組號碼,
    後來的那個人是「加入同號房」,而不是開出第二間同號房讓別人配錯邊。 */
-/* 隨機配對共用的公共房。兩種模式各一間,不然快速配對會把想玩簡化版的人
-   丟進完整版的房(房間的模式是建房時就定死的)。抽號從 1000 起,不會撞到。 */
-const PUBLIC_CODE = { full: "0000", simple: "0001" };
+/* 隨機配對共用的公共房。抽號從 1000 起,不會撞到這一組。 */
+const PUBLIC_CODE = "0001";
 
 export function makeRoomCode() {
   return String(1000 + Math.floor(Math.random() * 9000));
@@ -118,7 +117,6 @@ export function createEngine() {
     S.hint = state.hint;
     S.roomCode = state.code;
     S.hostIndex = typeof state.hostIndex === "number" ? state.hostIndex : -1;
-    setMode(state.mode);
     S.unlocked = state.unlocked;
     S.pending = state.pending ? { c: state.pending.c, f: state.pending.f, w: state.pending.w, t: state.pending.t } : null;
     S.trend = state.trend ? { c: state.trend.c, rate: state.trend.rate, t: state.trend.t, t2: state.trend.t2 } : null;
@@ -184,11 +182,9 @@ export function createEngine() {
     }
   }
 
-  /* 建房時才送 mode:房間的模式由建房的人決定,加入的人是「進到那間房」,
-     模式跟著房間走,所以 joinRoom 不送 mode。 */
-  function createRoom(name, mode) {
+  function createRoom(name) {
     const code = makeRoomCode();
-    const opts = { code, mode: mode === "simple" ? "simple" : "full" };
+    const opts = { code };
     if (name) opts.name = name;
     return enterRoom(c => c.joinOrCreate("arena", opts), code);
   }
@@ -201,10 +197,9 @@ export function createEngine() {
     }
     return enterRoom(c => c.join("arena", name ? { code, name } : { code }), code);
   }
-  function quickMatch(name, mode) {
-    const m = mode === "simple" ? "simple" : "full";
-    const code = PUBLIC_CODE[m];
-    const opts = { code, mode: m };
+  function quickMatch(name) {
+    const code = PUBLIC_CODE;
+    const opts = { code };
     if (name) opts.name = name;
     return enterRoom(c => c.joinOrCreate("arena", opts), code);
   }
@@ -216,9 +211,6 @@ export function createEngine() {
     notify();
   }
 
-  /* 簡化版沒有「選目標格」這件事(伺服器也會忽略送上去的 zone),所以點地圖
-     不留選取狀態,免得畫面上出現一個按了沒作用的高亮框。 */
-  function selectTile(idx) { S.sel = S.mode === "simple" ? null : idx; notify(); }
   function selectUnit(id) { S.selU = (S.selU === id) ? null : id; notify(); }
   function focusUnit(u) {
     S.selU = u.id;
@@ -231,7 +223,7 @@ export function createEngine() {
   function startNow() { room && room.send("startNow"); }
   function summon(k) {
     flashUnit(k);
-    room && room.send("summon", { k, zone: S.sel });
+    room && room.send("summon", { k });
   }
   /* 大招:能不能放、放了會怎樣全部由伺服器判斷,client 只負責把按鈕閃一下,
      免得同一顆按鈕在本地與伺服器各有一套規則,兩邊對不起來。 */
@@ -264,7 +256,7 @@ export function createEngine() {
     setMapView(v) { mapView = v; },
     createRoom, joinRoom, quickMatch, leaveRoom, stop,
     pickClass, startNow,
-    selectTile, selectUnit, focusUnit,
+    selectUnit, focusUnit,
     settleOne, settleAll, settleGroup,
     summon, useUlt,
     toggleAuto, toggleSfx,

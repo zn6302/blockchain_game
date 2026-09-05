@@ -1,9 +1,9 @@
 import {
   createCoins, CLASSES, PLAYER_COLORS, ROSTER, PACK, ALLIN_MIN,
-  coinKeysFor, unitsFor, coinUnitsFor, isSimple, isLocked, lockLeft, LATE_T,
+  CK, UNITS, COIN_UNITS, isLocked, lockLeft, LATE_T,
   ULTS, ULT_CD, DCA_T, DCA_EVERY, STAKE_T, ALPHA_T
 } from "@noxcat/shared/constants.js";
-import { ZONES, hexXY, zinfoFor } from "@noxcat/shared/board.js";
+import { ZONES, hexXY, ZINFO } from "@noxcat/shared/board.js";
 import * as D from "@noxcat/shared/derived.js";
 
 /**
@@ -23,24 +23,15 @@ import * as D from "@noxcat/shared/derived.js";
  * 真正需要改的地方只有:入口函式多一個 `pi`(座位)參數取代原本寫死的
  * S.players[0]/u.p===0;`toast()/sfx()`換成呼叫 emit() 廣播/發送給特定座位;
  * `S.stats`(單一)換成每人一份;AI 對手判斷從 `p.me` 換成 `p.isBot`。
- *
- * `mode` 決定這間房是完整版還是簡化版。兵種表/礦區表/幣種都從 mode 取,
- * 不從 module 頂層常數取——同一個 server process 會同時跑兩種模式的房間。
  */
-export function createGameInstance({ emit, mode = "full" }) {
-  const UNITS = unitsFor(mode);
-  const ZINFO = zinfoFor(mode);
-  const CK = coinKeysFor(mode);
-  const COIN_UNITS = coinUnitsFor(mode);
-  const simple = isSimple(mode);
-
+export function createGameInstance({ emit }) {
   const S = {
     t: 180, running: false, units: [], uid: 0, players: [],
-    evtT: 10, warn: null, pending: null, trend: null, hint: "", avgW: 900, rugged: false,
-    unlocked: !simple,          // 完整版沒有解鎖這回事,一開始就當成已解鎖
+    evtT: 10, warn: null, pending: null, trend: null, hint: "", avgW: 900,
+    unlocked: false,            // 前 60 秒只能挖礦,時間到才解鎖戰鬥兵
   };
-  const COINS = createCoins(mode);
-  const ctx = { S, COINS, mode };
+  const COINS = createCoins();
+  const ctx = { S, COINS };
 
   // ---- 綁死 ctx 的共用公式(跟 client 端 state.js 的寫法對稱) ----
   const money = D.money, clamp = D.clamp;
@@ -67,7 +58,7 @@ export function createGameInstance({ emit, mode = "full" }) {
   function freshStats() {
     return {
       buys: 0, invested: 0, sells: 0, realized: 0, best: null, worst: null, holdSum: 0, holdN: 0,
-      deaths: 0, deathLoss: 0, rugLoss: 0, allin: 0, allinPL: null, ult: null, ultN: 0,
+      deaths: 0, deathLoss: 0, allin: 0, allinPL: null, ult: null, ultN: 0,
       spend: { NOX: 0, CATN: 0, MEOW: 0 }
     };
   }
@@ -79,8 +70,8 @@ export function createGameInstance({ emit, mode = "full" }) {
     S.units = [];
     S.uid = 0;
     S.t = 180; S.running = true;
-    S.evtT = 10; S.warn = null; S.pending = null; S.trend = null; S.hint = ""; S.avgW = 900; S.rugged = false;
-    S.unlocked = !simple;
+    S.evtT = 10; S.warn = null; S.pending = null; S.trend = null; S.hint = ""; S.avgW = 900;
+    S.unlocked = false;
     S.players = seats.map((seat, i) => ({
       i, color: PLAYER_COLORS[i], isBot: !!seat.isBot, name: seat.name || (seat.isBot ? `電腦 ${i + 1}` : "玩家"),
       cls: seat.cls, cash: CLASSES[seat.cls].cash, start: CLASSES[seat.cls].cash,
@@ -116,9 +107,9 @@ export function createGameInstance({ emit, mode = "full" }) {
   }
 
   /* ============================ 市場 ============================ */
-  /* 簡化版只有 NOX，所有新聞都打在同一種幣上：漲跌一定跟你有關，
+  /* 全場只有一種幣，所有新聞都打在 NOX 上：漲跌一定跟你有關，
      不會出現「這則新聞跟我持有的幣無關」這種需要先判斷幣種的情況。 */
-  const SIMPLE_EVENTS = [
+  const EVENTS = [
     { c: "NOX", f: 1.85, w: "網紅在喊 NOXCAT", t: "迷因狂熱，<b>NOXCAT 噴出</b>" },
     { c: "NOX", f: 0.55, w: "早期大戶準備解鎖", t: "解鎖拋壓，<b>NOXCAT 下殺</b>" },
     { c: "NOX", f: 1.55, w: "有交易所要上架 NOXCAT", t: "上架消息成真，<b>NOXCAT 大漲</b>" },
@@ -126,17 +117,6 @@ export function createGameInstance({ emit, mode = "full" }) {
     { c: "NOX", f: 1.40, w: "NOXCAT 宣布要做新應用", t: "新應用發表，<b>NOXCAT 走高</b>" },
     { c: "NOX", f: 0.72, w: "礦工正在大量增產", t: "供給暴增，<b>NOXCAT 回落</b>" }
   ];
-  const FULL_EVENTS = [
-    { c: "MEOW", f: 2.05, w: "網紅在喊喵喵迷因幣", t: "迷因狂熱，<b>MEOW 直接翻倍</b>" },
-    { c: "MEOW", f: 0.45, w: "喵喵幣早期大戶準備解鎖", t: "解鎖拋壓，<b>MEOW 腰斬</b>" },
-    { c: "MEOW", f: 1.75, w: "有交易所要上架喵喵幣", t: "上架消息成真，<b>MEOW 大漲</b>" },
-    { c: "MEOW", f: 0.55, w: "有人在傳喵喵幣是騙局", t: "恐慌拋售，<b>MEOW 崩跌</b>" },
-    { c: "CATN", f: 1.45, w: "貓薄荷幣宣布要做新應用", t: "新應用發表，<b>貓薄荷幣走高</b>" },
-    { c: "CATN", f: 0.68, w: "貓薄荷田正在大量增產", t: "供給暴增，<b>貓薄荷幣回落</b>" },
-    { c: "NOX", f: 1.05, w: "市場恐慌，資金逃向 NOXCAT", t: "避險買盤，<b>NOXCAT 小漲</b>" },
-    { c: "NOX", f: 0.96, w: "NOXCAT 的儲備傳出疑慮", t: "信心動搖，<b>NOXCAT 小幅波動</b>" }
-  ];
-  const EVENTS = simple ? SIMPLE_EVENTS : FULL_EVENTS;
   const TREND_T = 9;
 
   function tickPrices(dt) {
@@ -147,14 +127,8 @@ export function createGameInstance({ emit, mode = "full" }) {
       let drift = (Math.random() - 0.5) * c.vol * 2;
       if (S.trend && S.trend.c === k) drift += S.trend.rate * dt;
       c.price = Math.max(0.002, c.price * (1 + drift));
-      /* 簡化版不做抽乾歸零:全場只有一種幣,把它歸零等於整局同時結束,
+      /* 不做抽乾歸零:全場只有一種幣,把它歸零等於整局同時結束,
          沒有「還好我沒押那支」的對照，只是單純懲罰所有人。 */
-      if (!simple && k === "MEOW" && S.t < 120 && Math.random() < 0.0009) {
-        S.rugged = true;
-        S.units.forEach(u => { if (u.alive && u.coin === "MEOW") priv[u.p].stats.rugLoss += u.qty * COINS[u.coin].price; });
-        c.price = 0.002;
-        toast("⚠ <b>喵喵迷因幣被抽乾了</b>：MEOW 部隊只剩 50% 戰力，牠們身上的錢幾乎歸零，而且買不回來了。", "bad", 7000);
-      }
       c.hist.push(c.price); c.hist.shift();
     });
     updateHint();
@@ -187,26 +161,20 @@ export function createGameInstance({ emit, mode = "full" }) {
     if (h && h !== S.hint) toast(h, "warn", 4200);
     S.hint = h;
   }
-  /* 提示看的是「這局波動最大的那種幣」：完整版是喵喵幣，簡化版只有 NOX，
-     所以幣名與文案都從 COINS 取，不能寫死 COINS.MEOW（簡化版根本沒有那個鍵）。 */
-  const HINT_COIN = simple ? "NOX" : "MEOW";
   function updateHint() {
-    const n = COINS[HINT_COIN], h = n.hist, r = h[h.length - 10] ? n.price / h[h.length - 10] : 1;
-    const nm = simple ? "NOXCAT" : "喵喵幣";
-    if (n.price <= 0.002) setHint(`${nm}歸零：${HINT_COIN} 部隊剩一半戰力，結算已經拿不回錢，讓牠們去換掉對手的礦工。`);
-    else if (r > 1.15) setHint(`⚠ ${nm}短線過熱 — 現在結算可以把獲利鎖住。`);
-    else if (r < 0.87) setHint(simple
-      ? "⚠ NOXCAT 下跌中 — 貓咪變弱了，這時候召喚反而比較便宜。"
-      : "⚠ 喵喵幣下跌中 — MEOW 部隊變弱，改召 NOXCAT 部隊守礦區。");
+    const n = COINS.NOX, h = n.hist, r = h[h.length - 10] ? n.price / h[h.length - 10] : 1;
+    if (n.price <= 0.002) setHint("NOXCAT 歸零：部隊剩一半戰力，結算已經拿不回錢，讓牠們去換掉對手的礦工。");
+    else if (r > 1.15) setHint("⚠ NOXCAT 短線過熱 — 現在結算可以把獲利鎖住。");
+    else if (r < 0.87) setHint("⚠ NOXCAT 下跌中 — 貓咪變弱了，這時候召喚反而比較便宜。");
     else setHint("");
   }
 
   /* ============================ 操作：召喚＝買入 ============================ */
-  function summon(pi, k, zone) {
+  function summon(pi, k) {
     if (k === "titan") return useUlt(pi);            // 巨獸只從梭哈青年的大招出場
     const p = S.players[pi], u = UNITS[k], cost = costOf(k, p);
     if (!p || !p.alive || (p.cd[k] || 0) > 0 || p.cash < cost) return;
-    if (isLocked(mode, k, S.t)) {
+    if (isLocked(k, S.t)) {
       toast(`🔒 <b>${u.n}</b> 還沒解鎖 — 前 60 秒先挖礦攢錢，<b>${lockLeft(S.t)} 秒</b>後開打`, "warn", 2600, pi);
       return;
     }
@@ -214,32 +182,29 @@ export function createGameInstance({ emit, mode = "full" }) {
       toast(`⚠ <b>${u.coin}</b> 已經歸零，買不回來了 — ${COIN_UNITS[u.coin]} 這局不能再召喚`, "bad", 4200, pi);
       return;
     }
-    /* 簡化版不讓玩家選格子(連傘兵的空降點也不選),一律交給 defaultTarget 自動找,
-       少一層決策——這正是簡化版存在的理由。 */
-    const drop = !simple && (k === "para");
-    if (drop && zone == null) return;
-    const target = (!simple && zone != null) ? zone : defaultTarget(pi, k);
+    /* 玩家不選格子(連傘兵的空降點也不選),一律交給 defaultTarget 自動找,少一層決策。 */
+    const target = defaultTarget(pi, k);
     p.cash -= cost;
     const st = priv[pi].stats;
     st.buys++; st.invested += cost; st.spend[u.coin] += cost;
     p.cd[k] = u.cd * cdMulOf(p);
     const each = cost / packOf(k);
-    for (let i = 0; i < packOf(k); i++) spawn(pi, k, target, drop, { coin: u.coin, stake: each });
+    for (let i = 0; i < packOf(k); i++) spawn(pi, k, target, false, { coin: u.coin, stake: each });
     priceImpact(u.coin, cost);
     sfx("buy", 1);
   }
   /* ALL-IN 現在是梭哈青年的大招,所以受 60 秒冷卻管、不再是「每場一次」。
      bot 沒有大招,還是照舊用 p.allin 那條一次性的路。 */
-  function allIn(pi, k, zone) {
+  function allIn(pi, k) {
     const p = S.players[pi], u = UNITS[k || "titan"];
     if (!p || p.cash < ALLIN_MIN || !p.alive) return;
-    if (isLocked(mode, "titan", S.t)) {
+    if (isLocked("titan", S.t)) {
       toast(`🔒 <b>巨獸</b>還沒解鎖 — <b>${lockLeft(S.t)} 秒</b>後開打`, "warn", 2600, pi); return;
     }
     if (COINS[u.coin].price <= 0.002) {
       toast(`⚠ <b>${u.coin}</b> 已經歸零，All-in 沒有意義`, "bad", 4200, pi); return;
     }
-    const stake = p.cash, target = (!simple && zone != null) ? zone : defaultTarget(pi, "soldier");
+    const stake = p.cash, target = defaultTarget(pi, "soldier");
     const st = priv[pi].stats;
     st.allin = stake; st.ult = "degen"; st.ultN++;
     toast(`<b>ALL-IN</b>：${p.name} 把 ${money(stake)} 全押 ${u.coin}，巨獸出場`, "warn", 3600);
@@ -257,7 +222,7 @@ export function createGameInstance({ emit, mode = "full" }) {
     if (p.ultCd > 0) {
       toast(`大招冷卻中 — 還要 <b>${Math.ceil(p.ultCd)} 秒</b>`, "warn", 2200, pi); return;
     }
-    if (p.cls === "degen" && isLocked(mode, "titan", S.t)) {
+    if (p.cls === "degen" && isLocked("titan", S.t)) {
       toast(`🔒 巨獸還沒解鎖 — <b>${lockLeft(S.t)} 秒</b>後開打`, "warn", 2600, pi); return;
     }
     if (p.cash < ult.min) {
@@ -381,8 +346,8 @@ export function createGameInstance({ emit, mode = "full" }) {
     marketEvents(dt);
     S.avgW = avgWorth();
 
-    /* 簡化版：前 60 秒只能挖礦，時間一到廣播解鎖，不然玩家不會發現按鈕活了。 */
-    if (simple && !S.unlocked && S.t <= LATE_T) {
+    /* 前 60 秒只能挖礦，時間一到廣播解鎖，不然玩家不會發現按鈕活了。 */
+    if (!S.unlocked && S.t <= LATE_T) {
       S.unlocked = true;
       toast("⚔️ <b>戰鬥兵解鎖了</b> — 士兵、刺客現在可以召喚，梭哈青年的巨獸大招也開了，去搶別人的礦區", "warn", 4600);
       sfx("warn", 1);
@@ -496,7 +461,7 @@ export function createGameInstance({ emit, mode = "full" }) {
         if (r > 1.12 || u.hp / u.hpMax < 0.35 || (S.t < 12 && r > 0.98)) settle(u, true);
       });
       /* bot 也受簡化版的解鎖限制,不然前 60 秒會變成「只有電腦能打人」。 */
-      const pool = ROSTER.filter(k => costOf(k, p) <= p.cash && COINS[UNITS[k].coin].price > 0.002 && !(p.cd[k] > 0) && !isLocked(mode, k, S.t));
+      const pool = ROSTER.filter(k => costOf(k, p) <= p.cash && COINS[UNITS[k].coin].price > 0.002 && !(p.cd[k] > 0) && !isLocked(k, S.t));
       if (pool.length) {
         const wts = pool.map(k => { const c = COINS[UNITS[k].coin]; return Math.max(0.2, c.price / c.ref); });
         let s = wts.reduce((a, b) => a + b, 0) * Math.random(), pick = pool[0];
@@ -507,7 +472,7 @@ export function createGameInstance({ emit, mode = "full" }) {
           spawn(p.i, pick, tz, false, { coin: UNITS[pick].coin, stake: cost / packOf(pick) });
         priceImpact(UNITS[pick].coin, cost * 0.6);
       }
-      if (!p.allin && S.t < 45 && !isLocked(mode, "titan", S.t) && p.cash > 1200 && Math.random() < 0.35) {
+      if (!p.allin && S.t < 45 && !isLocked("titan", S.t) && p.cash > 1200 && Math.random() < 0.35) {
         const k = Math.random() < 0.6 ? "soldier" : "guard";
         p.allin = true; const stake = p.cash; p.cash = 0;
         spawn(p.i, "titan", defaultTarget(p.i, k), false, { coin: UNITS[k].coin, stake });
@@ -545,23 +510,9 @@ export function createGameInstance({ emit, mode = "full" }) {
         `你有 ${st.deaths} 支部隊陣亡，賠償只拿回三成，淨損 ${money(st.deathLoss)}，佔你總投入的 ${pctOf(st.deathLoss)}%。
          <b>丟進去的錢是有風險的</b>，不是放在銀行的存款。`]);
     }
-    if (S.rugged && st.rugLoss > 0) {
-      out.push(["抽地毯 · Rug Pull", "項目方跑了，幣一秒變壁紙",
-        `喵喵迷因幣這局被抽乾流動性、直接歸零，你手上 ${money(st.rugLoss)} 的部位跟著蒸發。
-         現實裡也有：<b>項目方把資金池抽走，幣一秒變壁紙</b>，而且再也買不回來。`]);
-    }
-    /* 集中/分散這一課在簡化版沒有意義——全場只有一種幣，任何人都會是「100% 集中」，
-       講「你應該分散」等於在罵玩家沒做一件遊戲不允許的事。 */
-    const sp = st.spend, tot = Object.values(sp).reduce((a, b) => a + b, 0);
-    if (!simple && tot > 200) {
-      const top = Object.keys(sp).sort((a, b) => sp[b] - sp[a])[0], share = Math.round(sp[top] / tot * 100);
-      if (share >= 60) out.push(["集中風險 · Concentration Risk", "你把雞蛋放在同一個籃子",
-        `這局有 ${share}% 的錢押在 <b>${top}</b> 上。集中持有會把賺跟賠一起放大；
-         分散到不同幣，整體起伏會小很多。`]);
-      else out.push(["分散投資 · Diversification", "你有做到分散",
-        `你的錢分散在不同幣種（最高只佔 ${share}%），所以單一幣崩盤時不會整組陣亡——
-         這就是<b>分散投資</b>在做的事。`]);
-    }
+    /* 「抽地毯」與「集中/分散」兩課都拿掉了：全場只有一種幣，前者不會發生，
+       後者則是任何人都必然 100% 集中，講「你應該分散」等於在罵玩家沒做一件
+       遊戲不允許的事。 */
     if (st.holdN >= 2) {
       const avg = st.holdSum / st.holdN;
       if (avg < 14) out.push(["手續費侵蝕 · Fee Drag", "你是短線玩家",

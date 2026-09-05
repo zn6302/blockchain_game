@@ -27,7 +27,7 @@ export default function MapStage({ engine }) {
   const [introOn, setIntroOn] = useState(true);
 
   useEffect(() => {
-    const view = createMapView(svgRef.current, { onTileClick: (idx) => engine.selectTile(idx) });
+    const view = createMapView(svgRef.current);
     viewRef.current = view;
     engine.setMapView(view);
     view.render();
