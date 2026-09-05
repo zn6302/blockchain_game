@@ -1,5 +1,5 @@
 import { S, money, netWorth } from "../game/state.js";
-import { IP_CAT } from "../game/classIcons.js";
+import { IP_CAT_BACK } from "../game/classIcons.js";
 
 export default function ResultScreen() {
   const rank = [...S.players].sort((a, b) => (b.alive - a.alive) || (netWorth(b) - netWorth(a)));
@@ -14,7 +14,7 @@ export default function ResultScreen() {
     <div className="ov" id="resultOv">
       <div className="panel scrolly" style={{ maxWidth: 620 }}>
         <div className="ipres">
-          <img src={IP_CAT} alt="NOXCAT" />
+          <img src={IP_CAT_BACK} alt="NOXCAT" />
           <div className="reshead">
             <div className="eyebrow" id="resTag">{meWin ? "VICTORY" : "DEFEAT"}</div>
             <h3 id="resTitle">{meWin ? "你活下來，而且錢最多" : "你不是場上最有錢的"}</h3>

@@ -44,7 +44,6 @@ export default function MapStage({ engine }) {
       const k = e.key.toLowerCase();
       if (k === "q") engine.settleOne();
       if (k === "e") engine.settleAll();
-      if (k === "a") engine.toggleAuto();
     };
     addEventListener("keydown", onKeydown);
 

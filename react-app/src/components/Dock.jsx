@@ -182,7 +182,7 @@ export default function Dock({ engine }) {
         })()}
       </div>
       <div className="dockcol cashcol">
-        <span className="lab">可用 CASH</span>
+        <span className="lab">可用 CASH · NOXCAT 幣價</span>
         <div className="cash num" id="cashBig">{money(p.cash)}</div>
         <Ticker />
       </div>
@@ -196,7 +196,7 @@ export default function Dock({ engine }) {
             const lock = isLocked(k, S.t);                  // 開場 60 秒鎖住的戰鬥兵
             const off = lock || dead || !p.alive || cd > 0 || p.cash < cost;
             const poor = p.cash < cost && cd <= 0;
-            const evt = evc === u.coin && !dead;
+            const evt = !lock && evc === u.coin && !dead;
             const full = u.cd * cdMulOf(p) || 1;
             const firing = S.flashKey === k && now < S.flashUntil;
             return (
@@ -211,7 +211,7 @@ export default function Dock({ engine }) {
                 <div className="cd" style={cd > 0 ? { display: "flex", height: Math.min(100, cd / full * 100) + "%" } : { display: "none" }}>
                   {cd > 0 ? cd.toFixed(1) : ""}
                 </div>
-                {lock && <div className="lk"><span>🔒</span><b>{lockLeft(S.t)}s</b></div>}
+                {lock && <div className="lk"><span className="lkb"><i>🔒</i><b>{lockLeft(S.t)}s</b></span></div>}
               </button>
             );
           })}
