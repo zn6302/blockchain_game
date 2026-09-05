@@ -14,19 +14,9 @@ export default function App() {
   useEngineVersion(engine);
 
   /* 進場不再自動連線:先讓玩家選建立房間 / 輸入房號,連線由 EntryScreen 觸發。
-     連線錯誤(房號不存在、房間已滿…)也回到 EntryScreen 就地顯示。 */
-  if (S.phase === "entry") return <EntryScreen engine={engine} />;
-
-  if (S.phase === "connecting") {
-    return (
-      <div className="ov">
-        <div className="panel">
-          <div className="eyebrow">NOXCAT ARENA</div>
-          <h3>連線中…</h3>
-        </div>
-      </div>
-    );
-  }
+     連線中也留在 EntryScreen(而不是換成一個「連線中」畫面)——不然一被卸載,
+     剛打的房號就沒了,加入失敗時要重打一次。 */
+  if (S.phase === "entry" || S.phase === "connecting") return <EntryScreen engine={engine} />;
 
   if (S.phase === "lobby") {
     const me = S.players[S.myIndex];
