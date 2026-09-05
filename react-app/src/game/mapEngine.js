@@ -46,6 +46,118 @@ function pixelText(text, weight, size, family, color, track) {
   return { url: c.toDataURL(), w, h };
 }
 
+/* ---------------- 大招特效 ----------------
+   伺服器只廣播「誰、在哪一格、放了哪一招」(fx 的 k:"ult"),長什麼樣子完全由這裡決定。
+   跟其他 fx 一樣是每個 frame 重畫的字串,沒有 CSS animation——因為每一發都有自己的
+   進度 (f.t/f.life),用 CSS 就得替每一發生一個節點再等它自己結束,反而更難收乾淨。
+   四招的畫面刻意各走各的形狀,瞄一眼就分得出來是哪一招：
+     定期定額 = 定速落下的硬幣（節奏）  鎖倉 = 扣上去的六角護盾（封住）
+     ALL-IN  = 往外炸的震波與裂縫（衝擊）內線 = 往外掃的雷達（範圍）
+   pr 是 0→1 的進度,k 是 1→0 的剩餘量（拿來當淡出用）。 */
+function isoRing(x, y, r, col, op, w, extra) {
+  return `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="${r.toFixed(1)}" ry="${(r * KY).toFixed(1)}"
+    fill="none" stroke="${col}" stroke-width="${w.toFixed(1)}" opacity="${op.toFixed(2)}" ${extra || ""}/>`;
+}
+function hexRing(x, y, f, col, op, w) {
+  return `<polygon points="${PS(isoPts(x, y, f))}" fill="none" stroke="${col}"
+    stroke-width="${w.toFixed(1)}" stroke-linejoin="round" opacity="${op.toFixed(2)}"/>`;
+}
+function coinGlyph(x, y, col, op, r) {
+  if (op <= 0.02) return "";
+  return `<g opacity="${op.toFixed(2)}">
+    <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="${col}"/>
+    <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="none" stroke="#0A0F0A" stroke-width="1.1"/>
+    <ellipse cx="${(x - r * 0.3).toFixed(1)}" cy="${(y - r * 0.34).toFixed(1)}"
+      rx="${(r * 0.33).toFixed(1)}" ry="${(r * 0.28).toFixed(1)}" fill="#FFFFFF" opacity=".55"/></g>`;
+}
+
+const ULT_FX = {
+  /* 定期定額：錢按固定的拍子從天上掉進基地。七枚硬幣的間隔是寫死的等距,不隨機——
+     這一招講的就是「節奏」,亂掉就沒有意思了。 */
+  office(f, pr, k) {
+    let s = isoRing(f.x, f.y + 6, 20 + pr * 42, f.c, k * 0.75, 3)
+      + isoRing(f.x, f.y + 6, 8 + pr * 24, f.c, k * 0.45, 2);
+    for (let i = 0; i < 7; i++) {
+      const lp = clamp((pr - i * 0.07) / 0.5, 0, 1);
+      if (lp <= 0) continue;
+      const a = i * 1.795 + 0.5;
+      const drop = (1 - lp * lp) * 78;                    // 越掉越快
+      s += coinGlyph(f.x + Math.cos(a) * 34, f.y + 4 + Math.sin(a) * 34 * KY - drop,
+        f.c, Math.min(1, lp * 4) * Math.min(1, k * 3), 5.2);
+    }
+    return s;
+  },
+  /* 鎖倉：護盾用的是地格本身的六角形,由小扣到滿格,看起來就是「這塊地被封起來」。
+     外圈那條虛線一直在轉,12 秒內每隻貓身上的泡泡是另一段(drawUnits 畫的)。 */
+  saver(f, pr, k) {
+    const sc = 0.25 + clamp(pr / 0.3, 0, 1) * 0.85 + (1 - k) * 0.06;
+    let s = `<polygon points="${PS(isoPts(f.x, f.y, sc))}" fill="${f.c}" opacity="${(k * 0.16).toFixed(2)}"/>`;
+    s += hexRing(f.x, f.y, sc, f.c, k * 0.95, 3.4);
+    s += hexRing(f.x, f.y, sc * 0.72, f.c, k * 0.5, 1.8);
+    s += `<g transform="rotate(${(pr * 230).toFixed(1)} ${f.x.toFixed(1)} ${f.y.toFixed(1)})">`
+      + isoRing(f.x, f.y, HEXR * sc * 0.9, f.c, k * 0.55, 1.6, 'stroke-dasharray="6 10"') + `</g>`;
+    const ly = f.y - 26 - pr * 12, op = Math.min(1, pr * 5) * Math.min(1, k * 2.4);
+    s += `<g opacity="${op.toFixed(2)}">
+      <path d="M${(f.x - 5).toFixed(1)},${(ly - 2).toFixed(1)} a5,5.5 0 0 1 10,0"
+        fill="none" stroke="${f.c}" stroke-width="2"/>
+      <rect x="${(f.x - 7).toFixed(1)}" y="${(ly - 2).toFixed(1)}" width="14" height="11" rx="2" fill="${f.c}"/>
+      <circle cx="${f.x.toFixed(1)}" cy="${(ly + 3.5).toFixed(1)}" r="1.8" fill="#0A0F0A"/></g>`;
+    return s;
+  },
+  /* ALL-IN：巨獸砸下來。三圈震波錯開往外炸 + 放射狀裂縫 + 中心一下白光。
+     鏡頭的晃動不在這裡——那是 engine 收到事件時叫 mapView.shake()。 */
+  degen(f, pr, k) {
+    let s = "";
+    for (let i = 0; i < 3; i++) {
+      const lp = clamp((pr - i * 0.13) / 0.62, 0, 1);
+      if (lp <= 0) continue;
+      const e = 1 - Math.pow(1 - lp, 3);                  // 一開始衝很快,尾巴慢慢停
+      s += hexRing(f.x, f.y, 0.3 + e * 2.1, f.c, (1 - lp) * 0.9, 4.2 - i * 1.1);
+    }
+    const w = clamp(k * 1.4, 0, 1);
+    for (let i = 0; i < 11; i++) {
+      const a = i * 0.571 + 0.2, d0 = 14 + pr * 96;
+      s += `<line x1="${(f.x + Math.cos(a) * 12).toFixed(1)}" y1="${(f.y + Math.sin(a) * 12 * KY).toFixed(1)}"
+        x2="${(f.x + Math.cos(a) * d0).toFixed(1)}" y2="${(f.y + Math.sin(a) * d0 * KY).toFixed(1)}"
+        stroke="${f.c}" stroke-width="${(1 + w * 2.4).toFixed(1)}"
+        opacity="${(w * 0.85).toFixed(2)}" stroke-linecap="round"/>`;
+    }
+    const flash = clamp(pr / 0.18, 0, 1), fr = 24 + pr * 30;
+    s += `<ellipse cx="${f.x.toFixed(1)}" cy="${f.y.toFixed(1)}" rx="${fr.toFixed(1)}"
+      ry="${(fr * KY).toFixed(1)}" fill="#FFF6E2" opacity="${((1 - flash) * 0.85).toFixed(2)}"/>`;
+    return s;
+  },
+  /* 內線消息：從基地往外掃一圈的雷達。它沒有打到任何人,給的是「你先看到了」,
+     所以環走得比誰都遠,掃描線帶一截殘影表示它在轉。 */
+  insider(f, pr, k) {
+    let s = "";
+    for (let i = 0; i < 3; i++) {
+      const lp = clamp((pr - i * 0.16) / 0.7, 0, 1);
+      if (lp <= 0) continue;
+      s += isoRing(f.x, f.y, 16 + lp * 215, f.c, (1 - lp) * 0.55, 2.2);
+    }
+    const a0 = -Math.PI / 2 + pr * Math.PI * 3.2;
+    for (let i = 0; i < 5; i++) {
+      const a = a0 - i * 0.14;
+      s += `<line x1="${f.x.toFixed(1)}" y1="${f.y.toFixed(1)}"
+        x2="${(f.x + Math.cos(a) * 120).toFixed(1)}" y2="${(f.y + Math.sin(a) * 120 * KY).toFixed(1)}"
+        stroke="${f.c}" stroke-width="2" opacity="${(k * 0.5 * (1 - i / 5)).toFixed(2)}" stroke-linecap="round"/>`;
+    }
+    const ey = f.y - 34, op = Math.min(1, pr * 4) * Math.min(1, k * 2.2);
+    s += `<g opacity="${op.toFixed(2)}">
+      <path d="M${(f.x - 15).toFixed(1)},${ey.toFixed(1)} q15,-13 30,0 q-15,13 -30,0"
+        fill="#0A0F0A" stroke="${f.c}" stroke-width="1.8"/>
+      <circle cx="${f.x.toFixed(1)}" cy="${ey.toFixed(1)}" r="4.6" fill="${f.c}"/>
+      <circle cx="${(f.x + 1.4).toFixed(1)}" cy="${(ey - 1.4).toFixed(1)}" r="1.6" fill="#0A0F0A"/></g>`;
+    return s;
+  },
+  /* 定期定額進行中,每買一隻就打一個小脈衝——那 24 秒裡機器一直在動,要看得見。 */
+  dca(f, pr, k) {
+    return isoRing(f.x, f.y + 4, 6 + pr * 26, f.c, k * 0.7, 2)
+      + coinGlyph(f.x, f.y - 4 - pr * 18, f.c, Math.min(1, k * 1.6), 4.4);
+  },
+};
+
 const NS = "http://www.w3.org/2000/svg";
 
 /**
@@ -63,9 +175,29 @@ export function createMapView(svgEl) {
 
   function bandOf(y) { return clamp(Math.floor((y - BANDS.min) / BAND), 0, BANDS.n - 1); }
 
+  /* 鏡頭震動（目前只有巨獸落地會用）。偏移是加在輸出的 viewBox 上,不動 CAM 本身——
+     CAM 是玩家自己的視角,震完得原封不動回到原位;把偏移寫進 CAM,連續兩發就會把
+     鏡頭一路推走。clampCam 也因此不必知道有這回事。 */
+  let shk = null, shkRaf = 0, shkX = 0, shkY = 0;
   function applyCam() {
     const w = VBW / CAM.z, h = VBH / CAM.z;
-    svgEl.setAttribute("viewBox", `${(CAM.x - w / 2).toFixed(1)} ${(CAM.y - h / 2).toFixed(1)} ${w.toFixed(1)} ${h.toFixed(1)}`);
+    svgEl.setAttribute("viewBox", `${(CAM.x + shkX - w / 2).toFixed(1)} ${(CAM.y + shkY - h / 2).toFixed(1)} ${w.toFixed(1)} ${h.toFixed(1)}`);
+  }
+  function shake(amp, ms) {
+    if (matchMedia("(prefers-reduced-motion:reduce)").matches) return;
+    const now = performance.now();
+    /* 同時來兩隻巨獸就取比較大的那一發,不要疊加成失控的抖動。 */
+    shk = { amp: Math.max(amp, (shk && shk.end > now) ? shk.amp : 0), end: now + ms, dur: ms };
+    if (shkRaf) return;
+    const step = (t) => {
+      if (!shk || t >= shk.end) { shk = null; shkRaf = 0; shkX = shkY = 0; applyCam(); return; }
+      const d = Math.pow((shk.end - t) / shk.dur, 2);          // 越震越小
+      shkX = (Math.random() * 2 - 1) * shk.amp * d;
+      shkY = (Math.random() * 2 - 1) * shk.amp * d * KY;
+      applyCam();
+      shkRaf = requestAnimationFrame(step);
+    };
+    shkRaf = requestAnimationFrame(step);
   }
   function viewSize() {                                // slice 之後實際看得到的世界範圍
     const r = svgEl.getBoundingClientRect(), vw = VBW / CAM.z, vh = VBH / CAM.z;
@@ -222,12 +354,17 @@ export function createMapView(svgEl) {
       <circle cx="${(bw / 2 + 3.5).toFixed(1)}" cy="${(-H + 0.3).toFixed(1)}" r="2.6" fill="${ch.hex}" stroke="#0A0F0A" stroke-width=".8"/>
       ${mine ? `<g class="plg" style="display:none"><rect class="mbg" x="-19" y="${(-H - 15).toFixed(1)}" width="38" height="13" rx="6.5"/>
         <text class="plbig" y="${(-H - 5.5).toFixed(1)}"></text></g>
-        <text class="plmark" y="${(-H - 5).toFixed(1)}"></text>` : ""}`;
+        <text class="plmark" y="${(-H - 5).toFixed(1)}"></text>` : ""}
+      <g class="shd" style="display:none">
+        <circle class="shb" cy="-2" fill="#4FD1C5" opacity=".12"/>
+        <circle class="shr" cy="-2" fill="none" stroke="#4FD1C5" stroke-width="1.6" stroke-dasharray="4 5"/>
+      </g>`;
     const n = {
       g, ui, sc: g.querySelector(".sc"), fl: g.querySelector(".fl"), img: g.querySelector("image"), hf: g.querySelector(".hf"),
       cb: ui.querySelector(".cb"), se: ui.querySelector(".se"), mn: ui.querySelector(".mn"),
       hp: ui.querySelector(".hp"), mark: ui.querySelector(".plmark"),
       plg: ui.querySelector(".plg"), mbg: ui.querySelector(".mbg"), plb: ui.querySelector(".plbig"),
+      shd: ui.querySelector(".shd"), shb: ui.querySelector(".shb"), shr: ui.querySelector(".shr"),
       W, H, bw, band: -1, href: "", face: 0, seen: 0, k: 0
     };
     const rr = ui.querySelectorAll("rect"); n.hpbg = rr[0];
@@ -240,6 +377,7 @@ export function createMapView(svgEl) {
   function drawUnits() {
     if (!BANDS.el.length) return;
     const fr = Math.floor(performance.now() / 150) % 4;
+    const tsec = performance.now() / 1000;
     uframe++;
     S.units.forEach(u => {
       if (!u.alive) return;
@@ -284,6 +422,18 @@ export function createMapView(svgEl) {
         n.mn.setAttribute("opacity", (u.mineFx / 0.55 * 0.7).toFixed(2));
       }
       else if (n.mn.style.display !== "none") n.mn.style.display = "none";
+      /* 鎖倉那 12 秒,這位玩家的每一隻貓都不會受傷——所以每一隻身上都要有泡泡。
+         狀態直接讀 owner.lockT（伺服器同步過來的）,不必再多一條 per-unit 欄位;
+         最後 1.2 秒淡出,玩家才看得出保護快沒了。 */
+      const lockT = (S.players[u.p] || {}).lockT || 0;
+      if (lockT > 0) {
+        const r = n.W * 0.66 * Math.max(1, n.k) + Math.sin(tsec * 5 + u.id) * 1.4;
+        n.shd.style.display = "";
+        n.shd.setAttribute("opacity", Math.min(1, lockT / 1.2).toFixed(2));
+        n.shb.setAttribute("r", r.toFixed(1));
+        n.shr.setAttribute("r", (r + 2).toFixed(1));
+        n.shr.setAttribute("stroke-dashoffset", (-tsec * 14).toFixed(1));
+      } else if (n.shd.style.display !== "none") n.shd.style.display = "none";
       n.hp.setAttribute("width", (n.bw * Math.max(0, u.hp / u.hpMax)).toFixed(1));
       if (n.mark) {
         const r = ch.price <= 0.002 ? 0 : ch.price / u.entry, up = r >= 1, pct = Math.round((r - 1) * 100);
@@ -355,6 +505,9 @@ export function createMapView(svgEl) {
         s += `<text class="dmgtxt" x="${f.x.toFixed(1)}" y="${(f.y - rise).toFixed(1)}"
              fill="${col}" opacity="${Math.min(1, k * 2.2).toFixed(2)}"
              stroke="#050805" stroke-width="2.4" paint-order="stroke">${txt}</text>`;
+      } else if (f.k === "ult") {
+        const draw = ULT_FX[f.u];
+        if (draw) s += draw(f, 1 - k, k);
       }
     });
     l.innerHTML = s;
@@ -444,11 +597,15 @@ export function createMapView(svgEl) {
   function home() { animateTo(homeView(S.myIndex), 420); }
   function focusOn(x, y) { animateTo({ x, y: y - 10, z: Math.max(CAM.z, 1.6) }, 320); }
 
-  function destroy() { cleanupFns.forEach(fn => fn()); cleanupFns = []; }
+  function destroy() {
+    cleanupFns.forEach(fn => fn()); cleanupFns = [];
+    if (shkRaf) cancelAnimationFrame(shkRaf);
+    shkRaf = 0; shk = null; shkX = 0; shkY = 0;
+  }
 
   return {
     render, attachInteraction, destroy,
-    drawUnits, drawFx, drawZoneFx,
+    drawUnits, drawFx, drawZoneFx, shake,
     zoomIn, zoomOut, home, focusOn,
     animateTo, clampCam, applyCam,
     setInitialCamera() { Object.assign(CAM, homeView(S.myIndex)); clampCam(); applyCam(); },

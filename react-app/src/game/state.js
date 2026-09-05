@@ -15,6 +15,9 @@ export const S = {
   units: [], players: [], over: false,
   evtT: 10, pending: null, trend: null, hint: "", fx: [],
   flashKey: null, flashUntil: 0,
+  /* 自己放招時的橫幅:{ cls, until, seq }。純視覺,由 engine 收到 ult 特效時寫入,
+     所以它跟 fx 一樣是「事件」而不是伺服器同步過來的狀態。 */
+  ultCast: null,
   stats: null, lessonsCache: null,
 };
 
@@ -27,7 +30,7 @@ export function resetRoomState() {
     unlocked: false,
     t: 180, running: false, selU: null,
     units: [], players: [], over: false,
-    evtT: 10, pending: null, trend: null, hint: "", fx: [],
+    evtT: 10, pending: null, trend: null, hint: "", fx: [], ultCast: null,
     stats: null, lessonsCache: null,
   });
 }

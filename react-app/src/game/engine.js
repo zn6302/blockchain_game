@@ -1,12 +1,17 @@
 import { Client } from "@colyseus/sdk";
 import { S, resetRoomState } from "./state.js";
 import { COINS, PLAYER_COLORS } from "./constants.js";
+import { ULTS } from "@noxcat/shared/constants.js";
 import { toast } from "./toast.js";
 import { SFX, sfxInit, sfx } from "./audio.js";
 
 /* 伺服器只送「這個事件發生了」的資料(k/x/y/...),沒有帶存活時間——
    存活時間是純視覺概念,原本活在 combat.js 的 fx.js 裡,現在搬到這裡, "接到就補上"。 */
 const FX_LIFE = { shot: 0.13, hit: 0.24, dmg: 0.85, kill: 0.5, coin: 1.05 };
+/* 大招的演出比戰鬥特效長得多——它是一場戲,不是一發子彈,所以存活時間按招式分。
+   dca 是定期定額每一拍的小脈衝,短得多,不然 24 秒內八拍會疊成一團。 */
+const ULT_LIFE = { office: 1.5, saver: 1.6, degen: 1.8, insider: 1.7, dca: 0.7 };
+const CAST_MS = 2000;                            // 自己放招時橫幅停留的時間
 
 /* 幣價走勢圖要有一段歷史才畫得出來,但伺服器只同步「現在的價格」——歷史純粹是
    看的,每個 client 自己留一份就好,不值得每個 tick 多送 40 個數字上線。這裡照
@@ -163,7 +168,11 @@ export function createEngine() {
 
       room.onStateChange((state) => mirrorState(state));
       room.onMessage("fx", (batch) => {
-        batch.forEach(f => S.fx.push({ ...f, t: FX_LIFE[f.k] || 0.3, life: FX_LIFE[f.k] || 0.3 }));
+        batch.forEach(f => {
+          const life = f.k === "ult" ? (ULT_LIFE[f.u] || 1.4) : (FX_LIFE[f.k] || 0.3);
+          S.fx.push({ ...f, t: life, life });
+          if (f.k === "ult" && f.u !== "dca") onUltCast(f);
+        });
       });
       room.onMessage("sfx", (batch) => { batch.forEach(({ kind, vol }) => sfx(kind, vol)); });
       room.onMessage("toast", ({ msg, kind, ms }) => toast(msg, kind, ms));
@@ -210,6 +219,17 @@ export function createEngine() {
     histSeeded = false;
     stop();
     resetRoomState();
+    notify();
+  }
+
+  /* 大招發動的「非地圖」部分。地圖上的演出走 S.fx → mapEngine,這裡只處理兩件
+     它畫不到的事:自己放招時的橫幅,以及巨獸落地的鏡頭震動(震的是相機,不是圖層,
+     所以只能由 mapView 出手)。橫幅只給發動者看——別人放招用地圖上的特效講就夠了,
+     四個人的招輪流蓋在畫面中間會擋住正在打的那場仗。 */
+  function onUltCast(f) {
+    if (f.u === "degen" && mapView) mapView.shake(f.p === S.myIndex ? 7 : 4.5, 620);
+    if (f.p !== S.myIndex || !ULTS[f.u]) return;
+    S.ultCast = { cls: f.u, until: performance.now() + CAST_MS, seq: (S.ultCast?.seq || 0) + 1 };
     notify();
   }
 
