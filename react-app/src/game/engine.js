@@ -1,5 +1,5 @@
 import { Client } from "@colyseus/sdk";
-import { S } from "./state.js";
+import { S, resetRoomState } from "./state.js";
 import { COINS } from "./constants.js";
 import { toast } from "./toast.js";
 import { SFX, sfxInit, sfx } from "./audio.js";
@@ -11,6 +11,29 @@ const FX_LIFE = { shot: 0.13, hit: 0.24, dmg: 0.85, kill: 0.5, coin: 1.05 };
 function wsEndpoint() {
   const proto = location.protocol === "https:" ? "wss:" : "ws:";
   return `${proto}//${location.hostname}:2567`;
+}
+
+/* ---------------- 房號配對 ----------------
+   房號就是伺服器 filterBy(["code"]) 用的鍵:同一個 code 才會配到同一間房。
+   建房用 joinOrCreate 而不是 create——萬一兩個人剛好抽到同一組號碼,
+   後來的那個人是「加入同號房」,而不是開出第二間同號房讓別人配錯邊。 */
+const PUBLIC_CODE = "0000";                 // 隨機配對共用的公共房;抽號從 1000 起,不會撞到
+
+export function makeRoomCode() {
+  return String(1000 + Math.floor(Math.random() * 9000));
+}
+export function normalizeCode(raw) {
+  return String(raw ?? "").replace(/\D/g, "").slice(0, 4);
+}
+export function isPublicCode(code) {
+  return code === PUBLIC_CODE;
+}
+
+/* Colyseus 找不到符合 code 的房就丟 521;其餘照伺服器訊息顯示(房間已滿/已開始)。 */
+function friendlyError(err, code) {
+  if (err && err.code === 521) return `找不到房號 ${code}，可能號碼打錯、房間已滿或那場已經開始了`;
+  const msg = String((err && err.message) || err || "");
+  return msg || "連線失敗";
 }
 
 /**
@@ -63,7 +86,7 @@ export function createEngine() {
     S.t = state.t;
     S.evtT = state.evtT;
     S.hint = state.hint;
-    S.lobbyDeadline = state.lobbyDeadline;
+    S.roomCode = state.code;
     S.pending = state.pending ? { c: state.pending.c, f: state.pending.f, w: state.pending.w, t: state.pending.t } : null;
     S.trend = state.trend ? { c: state.trend.c, rate: state.trend.rate, t: state.trend.t, t2: state.trend.t2 } : null;
     mirrorCoins(state);
@@ -90,12 +113,18 @@ export function createEngine() {
     rafId = 0;
   }
 
-  async function connect(name) {
+  /* 三個入口(建立/加入/隨機)只差在怎麼跟 matchmaker 要房間,拿到 room 之後
+     的綁定完全一樣,所以共用這一段。 */
+  async function enterRoom(getRoom, code) {
+    S.connectError = null;
+    S.phase = "connecting";
+    notify();
     try {
       const client = new Client(wsEndpoint());
-      room = await client.joinOrCreate("arena", name ? { name } : {});
+      room = await getRoom(client);
       S.mySessionId = room.sessionId;
       S.connected = true;
+      S.roomCode = code;
 
       room.onStateChange((state) => mirrorState(state));
       room.onMessage("fx", (batch) => {
@@ -106,15 +135,42 @@ export function createEngine() {
       room.onMessage("gameOver", ({ stats, lessons }) => {
         S.stats = stats; S.lessonsCache = lessons; S.over = true; notify();
       });
-      room.onLeave(() => { stop(); });
+      room.onLeave(() => { stop(); room = null; });
 
       notify();
       last = 0; uiAcc = 0;
       rafId = requestAnimationFrame(renderLoop);
     } catch (err) {
-      S.connectError = String((err && err.message) || err);
+      room = null;
+      S.phase = "entry";
+      S.connected = false;
+      S.connectError = friendlyError(err, code);
       notify();
     }
+  }
+
+  function createRoom(name) {
+    const code = makeRoomCode();
+    return enterRoom(c => c.joinOrCreate("arena", name ? { code, name } : { code }), code);
+  }
+  function joinRoom(rawCode, name) {
+    const code = normalizeCode(rawCode);
+    if (code.length !== 4) {
+      S.connectError = "房號要 4 位數字";
+      notify();
+      return Promise.resolve();
+    }
+    return enterRoom(c => c.join("arena", name ? { code, name } : { code }), code);
+  }
+  function quickMatch(name) {
+    const code = PUBLIC_CODE;
+    return enterRoom(c => c.joinOrCreate("arena", name ? { code, name } : { code }), code);
+  }
+  function leaveRoom() {
+    if (room) { room.leave(); room = null; }
+    stop();
+    resetRoomState();
+    notify();
   }
 
   function selectTile(idx) { S.sel = idx; notify(); }
@@ -156,7 +212,7 @@ export function createEngine() {
     getVersion() { return version; },
     notify,
     setMapView(v) { mapView = v; },
-    connect, stop,
+    createRoom, joinRoom, quickMatch, leaveRoom, stop,
     pickClass, startNow,
     selectTile, selectUnit, focusUnit,
     settleOne, settleAll, settleGroup,

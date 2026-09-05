@@ -9,7 +9,9 @@ const gameServer = new Server({
   transport: new WebSocketTransport({ server: httpServer }),
 });
 
-gameServer.define("arena", ArenaRoom);
+/* filterBy(["code"]) 讓 join/joinOrCreate 只會配到「建立時 code 相同」的房間，
+   房號配對就是靠這一行——沒有它 join 會隨便配到任何一間開著的房。 */
+gameServer.define("arena", ArenaRoom).filterBy(["code"]);
 
 const port = Number(process.env.PORT) || 2567;
 gameServer.listen(port).then(() => {

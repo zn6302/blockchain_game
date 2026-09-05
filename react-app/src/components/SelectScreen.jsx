@@ -1,10 +1,12 @@
 import { CLASSES } from "../game/constants.js";
+import RoomCode from "./RoomCode.jsx";
 
 export default function SelectScreen({ onPick }) {
   return (
     <div className="ov" id="selectOv">
       <div className="panel">
         <div className="eyebrow">區塊鏈大戰爭 · 3 分鐘 · 4 人</div>
+        <RoomCode />
         <h3>召喚貓咪＝買幣，撤回＝賣幣</h3>
         <div className="steps">
           <div className="st"><b>1</b><span>按貓咪</span><i>花 Cash 買那種幣</i></div>

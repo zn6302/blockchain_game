@@ -1,30 +1,22 @@
-import { useEffect, useState } from "react";
 import { CLASSES } from "../game/constants.js";
 import { S } from "../game/state.js";
+import RoomCode from "./RoomCode.jsx";
 import { useEngineVersion } from "../hooks/useEngineStore.js";
-
-function Countdown() {
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 250);
-    return () => clearInterval(t);
-  }, []);
-  const secs = Math.max(0, Math.ceil((S.lobbyDeadline - now) / 1000));
-  return <>{secs} 秒後自動開始</>;
-}
 
 export default function LobbyScreen({ engine }) {
   useEngineVersion(engine);
   const me = S.players[S.myIndex];
+  const humans = S.players.filter(p => !p.isBot).length;
 
   return (
     <div className="ov" id="lobbyOv">
       <div className="panel">
         <div className="eyebrow">等待其他玩家</div>
         <h3>你是 {CLASSES[me?.cls]?.n || "?"}，等其他座位準備好</h3>
+        <RoomCode />
         <p className="lead">
-          人數不到 4 人時，剩下的座位由電腦 bot 接手。任何人按「開始遊戲」都能提前開局，
-          不然 <b style={{ color: "var(--lime)" }}><Countdown /></b>。
+          目前 {humans} 個真人。人數不到 4 人時，剩下的座位由電腦 bot 接手，
+          <b style={{ color: "var(--lime)" }}>任何人按「開始遊戲」就開局</b>；四個真人到齊會自動開始。
         </p>
         <div className="classes" id="lobbySeats">
           {S.players.map((p, i) => (
@@ -36,6 +28,7 @@ export default function LobbyScreen({ engine }) {
           ))}
         </div>
         <div className="foot">
+          <button className="btn ghost" onClick={() => engine.leaveRoom()}>離開房間</button>
           <button className="btn" onClick={() => engine.startNow()}>開始遊戲</button>
         </div>
       </div>

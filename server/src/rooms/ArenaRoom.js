@@ -1,17 +1,19 @@
-import { Room } from "@colyseus/core";
+import { Room, ServerError } from "@colyseus/core";
 import { CLASSES } from "@noxcat/shared/constants.js";
 import { GameState, PlayerState } from "../schema/GameState.js";
 import { createGameInstance } from "../game.js";
 import { syncState } from "../sync.js";
 
 const CLASS_KEYS = Object.keys(CLASSES);
-const LOBBY_WAIT_S = 12;
 
 export class ArenaRoom extends Room {
   maxClients = 4;
 
-  onCreate() {
+  /* options.code 就是房號。index.js 的 filterBy(["code"]) 已經保證進得來的人
+     都是拿同一個房號配對的,這裡只是把它存進 state 給 client 顯示。 */
+  onCreate(options) {
     this.setState(new GameState());
+    this.state.code = String((options && options.code) || "");
     for (let i = 0; i < 4; i++) {
       this.state.players.push(new PlayerState({ i, isBot: true, name: `電腦 ${i + 1}` }));
     }
@@ -62,13 +64,14 @@ export class ArenaRoom extends Room {
         if (p) p.auto = (msg && msg.mode === "hold") ? "hold" : "sell";
       }));
 
-    this.state.lobbyDeadline = Date.now() + LOBBY_WAIT_S * 1000;
-    this.lobbyTimer = this.clock.setTimeout(() => this.startMatch(), LOBBY_WAIT_S * 1000);
+    /* 沒有倒數自動開局:有房號以後大家是「約好了才進來」,倒數只會在人到齊前
+       就把比賽開掉。開局時機改成房內任何一個人按「開始遊戲」,或四個真人都到齊。 */
   }
 
   onJoin(client, options) {
+    if (this.state.phase !== "lobby") throw new ServerError(4001, "這一場已經開始了");
     const seatIdx = this.state.players.findIndex(p => p.isBot);
-    if (seatIdx === -1) { client.leave(); return; }
+    if (seatIdx === -1) throw new ServerError(4002, "房間已經滿了");
     const seat = this.state.players[seatIdx];
     seat.isBot = false;
     seat.sessionId = client.sessionId;
@@ -76,7 +79,7 @@ export class ArenaRoom extends Room {
     this.seatOf.set(client.sessionId, seatIdx);
     this.clientsBySeat[seatIdx] = client;
 
-    if (this.state.phase === "lobby" && this.humanCount() === 4) this.startMatch();
+    if (this.humanCount() === 4) this.startMatch();
   }
 
   async onLeave(client) {
@@ -122,7 +125,6 @@ export class ArenaRoom extends Room {
     if (this.state.phase !== "lobby" || this.matchStarted) return;
     this.matchStarted = true;
     this.lock();
-    if (this.lobbyTimer) { this.lobbyTimer.clear(); this.lobbyTimer = null; }
 
     const taken = new Set(this.pickedClass.filter(Boolean));
     const seats = this.state.players.map((seat, i) => {

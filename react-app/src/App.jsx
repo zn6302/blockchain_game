@@ -1,7 +1,8 @@
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { createEngine } from "./game/engine.js";
 import { useEngineVersion } from "./hooks/useEngineStore.js";
 import { S } from "./game/state.js";
+import EntryScreen from "./components/EntryScreen.jsx";
 import SelectScreen from "./components/SelectScreen.jsx";
 import LobbyScreen from "./components/LobbyScreen.jsx";
 import Hud from "./components/Hud.jsx";
@@ -12,24 +13,11 @@ export default function App() {
   const engine = useMemo(() => createEngine(), []);
   useEngineVersion(engine);
 
-  useEffect(() => {
-    engine.connect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  /* 進場不再自動連線:先讓玩家選建立房間 / 輸入房號,連線由 EntryScreen 觸發。
+     連線錯誤(房號不存在、房間已滿…)也回到 EntryScreen 就地顯示。 */
+  if (S.phase === "entry") return <EntryScreen engine={engine} />;
 
-  if (S.connectError) {
-    return (
-      <div className="ov">
-        <div className="panel">
-          <div className="eyebrow">連線失敗</div>
-          <h3>連不到伺服器</h3>
-          <p className="lead">{S.connectError}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!S.connected || S.phase === "connecting") {
+  if (S.phase === "connecting") {
     return (
       <div className="ov">
         <div className="panel">

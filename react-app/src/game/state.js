@@ -6,16 +6,29 @@ import * as derived from "@noxcat/shared/derived.js";
    形狀跟伺服器的 GameState/PlayerState/UnitState 對應,由 engine.js 收到
    room.onStateChange 時原地寫入,而不是自己跑模擬。 */
 export const S = {
-  phase: "connecting",              // "connecting" | "lobby" | "playing" | "ended"
+  phase: "entry",                   // "entry" | "connecting" | "lobby" | "playing" | "ended"
   connected: false, connectError: null,
+  roomCode: "",                     // 目前這間房的房號(伺服器 state.code)
   mySessionId: null, myIndex: null,
   t: 180, running: false, sel: null, selU: null,
   units: [], players: [], over: false,
   evtT: 10, pending: null, trend: null, hint: "", fx: [],
-  lobbyDeadline: 0,
   flashKey: null, flashUntil: 0,
   stats: null, lessonsCache: null,
 };
+
+/* 離開房間時把「屬於某一間房」的欄位清乾淨,讓玩家可以直接再建立/加入下一間,
+   不必 reload。故意不動 sel/flash 這種純 UI 的東西。 */
+export function resetRoomState() {
+  Object.assign(S, {
+    phase: "entry", connected: false, connectError: null, roomCode: "",
+    mySessionId: null, myIndex: null,
+    t: 180, running: false, selU: null,
+    units: [], players: [], over: false,
+    evtT: 10, pending: null, trend: null, hint: "", fx: [],
+    stats: null, lessonsCache: null,
+  });
+}
 
 const ctx = { S, COINS };
 

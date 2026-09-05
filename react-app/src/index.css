@@ -437,6 +437,27 @@ svg.map.drag{cursor:grabbing}
 .foot{display:flex;gap:10px;justify-content:flex-end}
 .hint{font-size:10.5px;color:var(--faint);font-family:var(--mono);letter-spacing:.3px}
 
+/* ---------- 房號配對 ---------- */
+.roomcode{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 13px;
+  background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:9px 13px}
+.roomcode-label{font-family:var(--mono);font-size:9.5px;letter-spacing:2.4px;color:var(--faint)}
+.roomcode-num{font-family:var(--mono);font-size:26px;font-weight:700;letter-spacing:6px;line-height:1;
+  color:var(--lime);padding:0}
+.roomcode-num:hover{text-decoration:underline}
+.roomcode-hint{font-size:10.5px;color:var(--muted);margin-left:auto}
+.entry-err{background:rgba(242,85,90,.12);border:1px solid var(--down);color:var(--down);
+  border-radius:10px;padding:9px 12px;font-size:11.5px;line-height:1.5;margin-bottom:13px}
+.entry-main{width:100%;padding:13px}
+.entry-or{font-family:var(--mono);font-size:9.5px;letter-spacing:2.4px;color:var(--faint);
+  text-align:center;margin:15px 0 9px}
+.entry-join{display:flex;gap:8px}
+.entry-code{flex:1;min-width:0;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;
+  color:var(--txt);font-family:var(--mono);font-size:22px;font-weight:700;letter-spacing:8px;
+  text-align:center;padding:8px 10px 8px 18px}
+.entry-code:focus{outline:none;border-color:var(--lime)}
+.entry-code::placeholder{color:var(--faint)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
 @media (max-width:1120px){
   .main{grid-template-columns:1fr}
   .bar-wrap{grid-template-columns:1fr}

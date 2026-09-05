@@ -71,7 +71,7 @@ export const GameState = schema({
   t: t.number().default(180),
   evtT: t.number().default(10),
   hint: t.string().default(""),
-  lobbyDeadline: t.number().default(0), // epoch ms,client 算倒數用
+  code: t.string().default(""),         // 房號,建房時由 client 產生並當成 filterBy 的鍵
   coins: t.map(CoinState),
   units: t.array(UnitState),
   players: t.array(PlayerState),
