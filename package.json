@@ -5,5 +5,11 @@
     "shared",
     "react-app",
     "server"
-  ]
+  ],
+  "scripts": {
+    "dev": "npm run dev -w react-app",
+    "build": "npm run build -w react-app",
+    "server": "npm run dev -w @noxcat/server",
+    "lint": "npm run lint -w react-app"
+  }
 }

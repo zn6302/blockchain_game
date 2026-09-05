@@ -47,7 +47,7 @@ export const PlayerState = schema({
   auto: t.string().default("sell"),
   allin: t.boolean().default(false),
   reliefT: t.number().default(4),
-  cd: t.map(t.number()),
+  cd: t.map("number"),
 }, "PlayerState");
 
 export const MarketEventState = schema({
