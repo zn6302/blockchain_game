@@ -252,6 +252,7 @@ export function createEngine() {
     getVersion() { return version; },
     notify,
     setMapView(v) { mapView = v; },
+    homeCamera() { mapView && mapView.home(); },
     createRoom, joinRoom, quickMatch, leaveRoom, stop,
     pickClass, startNow,
     selectUnit, focusUnit,

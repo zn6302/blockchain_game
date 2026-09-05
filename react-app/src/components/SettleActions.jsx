@@ -8,11 +8,21 @@ import { S, money, settleValue } from "../game/state.js";
  * 就在同一塊，眼睛不用在畫面兩端來回跑），面板被收起來的窄畫面才退回
  * 操作列。兩邊是同一個元件，只是掛在不同的父節點底下。
  */
-export default function SettleActions({ engine }) {
+export default function SettleActions({ engine, compact }) {
   if (!S.players[S.myIndex]) return null;
   const mineUnits = S.units.filter(u => u.alive && u.p === S.myIndex);
   const sel = S.units.find(x => x.id === S.selU && x.alive);
   const total = mineUnits.reduce((s, u) => s + settleValue(u), 0);
+
+  /* 手機直式只留「全部結算」,而且併進現金那一列——單隻結算改成部隊 chip 上的
+     「結」,少一整列,也少一顆大半時間是灰的按鈕。 */
+  if (compact) return (
+    <button className={`a asell ${!mineUnits.length ? "off" : ""}`} id="settleAll"
+      onClick={() => engine.settleAll()}>
+      <span className="t">全部結算</span>
+      <span className="p" id="settleAllVal">{mineUnits.length ? money(total) : "—"}</span>
+    </button>
+  );
 
   return (
     <div className="dockcol" id="actsCol">

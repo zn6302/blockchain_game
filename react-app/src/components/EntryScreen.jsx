@@ -22,12 +22,10 @@ export default function EntryScreen({ engine }) {
   return (
     <div className="ov" id="entryOv">
       <div className="panel" style={{ maxWidth: 520 }}>
-        <div className="eyebrow">NOXCAT ARENA</div>
-        <h3>開一間房，或用房號加入朋友</h3>
-        <p className="lead">
-          一場 3 分鐘、最多 4 人。人不夠的座位由電腦接手，
-          <b style={{ color: "var(--lime)" }}>房內任何人按「開始遊戲」就開局</b>。
-        </p>
+        <div className="eyebrow">NOXFLOW</div>
+        <h3>開房間，或加入你的朋友！</h3>
+        {/* 規則不在這頁講:等待室會再說一次開局條件,這裡只留選房間需要的規格。 */}
+        <div className="entry-meta">3 分鐘 · 最多 4 人 · 空位由電腦補</div>
 
         {S.connectError && <div className="entry-err">{S.connectError}</div>}
         {busy && <div className="entry-busy">連線中…</div>}
@@ -36,7 +34,7 @@ export default function EntryScreen({ engine }) {
           建立房間
         </button>
 
-        <div className="entry-or">或者輸入房號</div>
+        <div className="entry-or">或輸入房號</div>
 
         <form
           className="entry-join"
@@ -51,12 +49,17 @@ export default function EntryScreen({ engine }) {
             placeholder="0000"
             aria-label="房號"
           />
-          <button className="btn" type="submit" disabled={busy || !ready}>加入</button>
+          {/* 「加入」不用綠底:一個畫面上只能有一顆主要按鈕,不然綠色就不再代表
+              「這是我們希望你按的那顆」。填滿房號後 disabled 解除就是足夠的訊號。 */}
+          <button className="btn ghost" type="submit" disabled={busy || !ready}>加入</button>
         </form>
 
+        {/* 這顆進的是共用的公開房:有人在等就一起打,沒人就是電腦補滿。
+            叫「隨機配對」會讓人以為要等真人配對成功,結果是進去就開打——
+            「直接開始」講的是真正的賣點:不用等。 */}
         <div className="foot" style={{ justifyContent: "center", marginTop: 14 }}>
           <button className="btn ghost" disabled={busy} onClick={() => run(() => engine.quickMatch())}>
-            隨機配對（跟正在等的人湊一場）
+           直接開始！ 
           </button>
         </div>
       </div>

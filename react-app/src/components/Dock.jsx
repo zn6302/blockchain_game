@@ -4,7 +4,7 @@ import { SPRITES } from "../game/sprites.js";
 import { CLS_ICON } from "../game/classIcons.js";
 import { S, clamp, money, posValue, unitWorth, costOf, cdMulOf, BASE_INCOME, catchUpMul, groupTroops } from "../game/state.js";
 import { useEngineVersion } from "../hooks/useEngineStore.js";
-import { useMediaQuery, TROOP_PANEL_HIDDEN } from "../hooks/useMediaQuery.js";
+import { useMediaQuery, TROOP_PANEL_HIDDEN, MOBILE_DOCK } from "../hooks/useMediaQuery.js";
 import SettleActions from "./SettleActions.jsx";
 
 function TargetLine() {
@@ -96,7 +96,7 @@ function Ticker() {
 /* 大招：每個身份一顆,長得跟召喚卡完全不一樣（一顆有文字說明的長按鈕），
    因為它不是「再買一隻貓」,而是一個一次性的場上效果。能不能按的判斷跟
    伺服器 useUlt() 是同一組條件,只是這裡先做給眼睛看,真正的把關在伺服器。 */
-function UltButton({ engine, p }) {
+function UltButton({ engine, p, card }) {
   const ult = ULTS[p.cls];
   if (!ult) return null;
   const cd = p.ultCd || 0;
@@ -104,23 +104,32 @@ function UltButton({ engine, p }) {
   const poor = p.cash < ult.min;
   const off = !p.alive || cd > 0 || locked || poor;
   const firing = S.flashKey === "ult" && performance.now() < S.flashUntil;
-  const status = cd > 0 ? `冷卻中 · 還要 ${Math.ceil(cd)} 秒`
-    : locked ? `${lockLeft(S.t)} 秒後解鎖`
-      : poor ? `還差 ${money(ult.min - p.cash)}`
-        : `每 ${ULT_CD} 秒一次 · 點我發動`;
+  /* 卡片版寬度只有 ~55px,狀態句子要縮成一個詞,不然會被切掉 */
+  const status = card
+    ? (cd > 0 ? `${Math.ceil(cd)}s` : locked ? `${lockLeft(S.t)}s`
+      : poor ? `差 ${money(ult.min - p.cash)}` : "可發動")
+    : (cd > 0 ? `冷卻中 · 還要 ${Math.ceil(cd)} 秒`
+      : locked ? `${lockLeft(S.t)} 秒後解鎖`
+        : poor ? `還差 ${money(ult.min - p.cash)}`
+          : `每 ${ULT_CD} 秒一次 · 點我發動`);
+  const btn = (
+    <button className={`ultbtn ${card ? "ultcard" : ""} ${off ? "off" : "ready"} ${firing ? "fire" : ""}`} id="ultBtn"
+      onClick={() => engine.useUlt()}>
+      <i className="ucd" style={{ width: cd > 0 ? (cd / ULT_CD * 100).toFixed(1) + "%" : 0 }}></i>
+      {card && <span className="k">6</span>}
+      <span className="uhead">
+        <img src={CLS_ICON[p.cls]} alt="" />
+        <b>{ult.n}</b><i className="ug">大招 · 6</i>
+      </span>
+      <span className="ud">{ult.d}</span>
+      <span className="us">{status}</span>
+    </button>
+  );
+  if (card) return btn;
   return (
     <div className="dockcol ultcol">
       <span className="lab">每 {ULT_CD} 秒一次</span>
-      <button className={`ultbtn ${off ? "off" : "ready"} ${firing ? "fire" : ""}`} id="ultBtn"
-        onClick={() => engine.useUlt()}>
-        <i className="ucd" style={{ width: cd > 0 ? (cd / ULT_CD * 100).toFixed(1) + "%" : 0 }}></i>
-        <span className="uhead">
-          <img src={CLS_ICON[p.cls]} alt="" />
-          <b>{ult.n}</b><i className="ug">大招 · 6</i>
-        </span>
-        <span className="ud">{ult.d}</span>
-        <span className="us">{status}</span>
-      </button>
+      {btn}
     </div>
   );
 }
@@ -129,6 +138,7 @@ export default function Dock({ engine }) {
   useEngineVersion(engine);
   /* hook 要在 early return 之前呼叫,順序每次 render 都得一樣 */
   const panelHidden = useMediaQuery(TROOP_PANEL_HIDDEN);
+  const mobile = useMediaQuery(MOBILE_DOCK);
   const p = S.players[S.myIndex];
   if (!p) return null;
 
@@ -161,6 +171,9 @@ export default function Dock({ engine }) {
                 </span>
                 <span className="cb"><i style={{ width: (o.hp * 100).toFixed(0) + "%", background: o.hp > 0.5 ? ch.hex : "var(--down)" }}></i></span>
               </span>
+              {/* 單隻結算原本自己佔一整列（大半時間還是灰的）,收進 chip 裡:
+                  要賣誰就按誰,跟右側面板的 .tset 是同一個手勢。 */}
+              <span className="tset" onClick={(e) => { e.stopPropagation(); engine.settleGroup(o.k, o.coin); }}>結</span>
             </button>
           );
         })}
@@ -181,10 +194,13 @@ export default function Dock({ engine }) {
           );
         })()}
       </div>
-      <div className="dockcol cashcol">
-        <span className="lab">可用 CASH · NOXCAT 幣價</span>
-        <div className="cash num" id="cashBig">{money(p.cash)}</div>
-        <Ticker />
+      <div className="statusrow">
+        <div className="dockcol cashcol">
+          <span className="lab">可用 CASH · NOXCAT 幣價</span>
+          <div className="cash num" id="cashBig">{money(p.cash)}</div>
+          <Ticker />
+        </div>
+        {mobile && <SettleActions engine={engine} compact />}
       </div>
       <div className="sep"></div>
       <div className="dockcol">
@@ -215,12 +231,14 @@ export default function Dock({ engine }) {
               </button>
             );
           })}
+          {/* 手機直式:大招本來就掛在 1–5 後面的 6 號鍵,直接排進同一列當第 6 張卡,
+              省掉一整列,而且「要按什麼」變成一個完整的網格。 */}
+          {mobile && <UltButton engine={engine} p={p} card />}
         </div>
       </div>
-      <div className="sep"></div>
-      <UltButton engine={engine} p={p} />
+      {!mobile && <><div className="sep"></div><UltButton engine={engine} p={p} /></>}
       {/* 桌機的結算列在右側「我的部隊」面板底下,只有面板被收起來時才回到這裡 */}
-      {panelHidden && <><div className="sep"></div><SettleActions engine={engine} /></>}
+      {!mobile && panelHidden && <><div className="sep"></div><SettleActions engine={engine} /></>}
     </div>
   );
 }
