@@ -8,9 +8,17 @@ import { SFX, sfxInit, sfx } from "./audio.js";
    存活時間是純視覺概念,原本活在 combat.js 的 fx.js 裡,現在搬到這裡, "接到就補上"。 */
 const FX_LIFE = { shot: 0.13, hit: 0.24, dmg: 0.85, kill: 0.5, coin: 1.05 };
 
+/* 開發時前端在 vite 的 5173、伺服器在 2567,是兩個 port;
+   上線後同一個容器既送網頁也開 WebSocket,是同一個 origin——
+   所以 prod 用 location.host(帶著這一頁的 port,https 頁面自動走 wss),
+   不能寫死 :2567,雲端平台對外只有 443。
+   dev 用 hostname 而不是寫死 localhost,手機連區網 IP 進來才接得到同一台機器。 */
 function wsEndpoint() {
+  const override = import.meta.env.VITE_SERVER_URL;
+  if (override) return override;
   const proto = location.protocol === "https:" ? "wss:" : "ws:";
-  return `${proto}//${location.hostname}:2567`;
+  if (import.meta.env.DEV) return `${proto}//${location.hostname}:2567`;
+  return `${proto}//${location.host}`;
 }
 
 /* ---------------- 房號配對 ----------------

@@ -1,0 +1,14 @@
+# build context 只需要 manifest + 原始碼,其他都別送進 docker daemon
+node_modules
+**/node_modules
+react-app/dist
+.git
+.gitignore
+.github
+.claude
+.agents
+skills-lock.json
+Dockerfile
+.dockerignore
+fly.toml
+*.md
