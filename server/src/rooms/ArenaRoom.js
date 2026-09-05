@@ -49,7 +49,8 @@ export class ArenaRoom extends Room {
     });
     this.onMessage("startNow", (client) => {
       if (this.state.phase !== "lobby") return;
-      if (!this.seatOf.has(client.sessionId)) return;
+      // 只有房主能開局:其他人按了(或偽造訊息)都當沒發生
+      if (this.seatOf.get(client.sessionId) !== this.state.hostIndex) return;
       this.startMatch();
     });
     this.onMessage("summon", (client, msg) =>
@@ -82,6 +83,7 @@ export class ArenaRoom extends Room {
     seat.name = (options && options.name) || `玩家${seatIdx + 1}`;
     this.seatOf.set(client.sessionId, seatIdx);
     this.clientsBySeat[seatIdx] = client;
+    if (this.state.hostIndex < 0) this.state.hostIndex = seatIdx;  // 第一個進來的就是建房的人
 
     if (this.humanCount() === 4) this.startMatch();
   }
@@ -96,6 +98,10 @@ export class ArenaRoom extends Room {
       seat.isBot = true; seat.sessionId = ""; seat.name = "";
       this.pickedClass[pi] = null;
       this.seatOf.delete(client.sessionId);
+      /* 房主跑了就把房主讓給還在的人,不然剩下的人誰都按不了開始,整間房卡死。 */
+      if (pi === this.state.hostIndex) {
+        this.state.hostIndex = this.state.players.findIndex(p => !p.isBot);
+      }
       return;
     }
 
