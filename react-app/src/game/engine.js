@@ -8,6 +8,11 @@ import { SFX, sfxInit, sfx } from "./audio.js";
    存活時間是純視覺概念,原本活在 combat.js 的 fx.js 裡,現在搬到這裡, "接到就補上"。 */
 const FX_LIFE = { shot: 0.13, hit: 0.24, dmg: 0.85, kill: 0.5, coin: 1.05 };
 
+/* 幣價走勢圖要有一段歷史才畫得出來,但伺服器只同步「現在的價格」——歷史純粹是
+   看的,每個 client 自己留一份就好,不值得每個 tick 多送 40 個數字上線。這裡照
+   伺服器 tickPrices 的節奏(0.35s)自己往後推,取樣密度跟伺服器一致。 */
+const HIST_N = 40, HIST_EVERY = 0.35;
+
 function wsEndpoint() {
   const proto = location.protocol === "https:" ? "wss:" : "ws:";
   return `${proto}//${location.hostname}:2567`;
@@ -51,7 +56,8 @@ export function createEngine() {
   let version = 0;
   let mapView = null;
   let room = null;
-  let rafId = 0, last = 0, uiAcc = 0;
+  let rafId = 0, last = 0, uiAcc = 0, histAcc = 0;
+  let histSeeded = false;
 
   function notify() {
     version++;
@@ -80,6 +86,20 @@ export function createEngine() {
       if (!COINS[k]) COINS[k] = { name: k, sub: "", hex: "#8A9583", hist: [] };
       COINS[k].price = c.price; COINS[k].ref = c.ref;
     });
+    /* 第一次拿到伺服器的價格時把整條歷史鋪平成當下的價格,不然走勢圖會從
+       constants.js 的預設價一路衝到實際價,開場先給玩家看一根假的暴漲。 */
+    if (!histSeeded) {
+      Object.keys(COINS).forEach(k => { COINS[k].hist = Array.from({ length: HIST_N }, () => COINS[k].price); });
+      histSeeded = true;
+    }
+  }
+  function pushHist() {
+    Object.keys(COINS).forEach(k => {
+      const c = COINS[k];
+      if (!c.hist) c.hist = [];
+      c.hist.push(c.price);
+      while (c.hist.length > HIST_N) c.hist.shift();
+    });
   }
   function mirrorState(state) {
     S.phase = state.phase;
@@ -103,6 +123,8 @@ export function createEngine() {
     if (!last) last = ts;
     const dt = Math.min(0.05, (ts - last) / 1000); last = ts;
     if (S.fx.length) { S.fx.forEach(f => { f.t -= dt; }); S.fx = S.fx.filter(f => f.t > 0); }
+    histAcc += dt;
+    if (histAcc >= HIST_EVERY) { histAcc = 0; pushHist(); }
     if (mapView) { mapView.drawUnits(); mapView.drawFx(); }
     uiAcc += dt;
     if (uiAcc >= 0.15) {
@@ -143,7 +165,7 @@ export function createEngine() {
       room.onLeave(() => { stop(); room = null; });
 
       notify();
-      last = 0; uiAcc = 0;
+      last = 0; uiAcc = 0; histAcc = 0; histSeeded = false;
       rafId = requestAnimationFrame(renderLoop);
     } catch (err) {
       room = null;
@@ -180,6 +202,7 @@ export function createEngine() {
   }
   function leaveRoom() {
     if (room) { room.leave(); room = null; }
+    histSeeded = false;
     stop();
     resetRoomState();
     notify();

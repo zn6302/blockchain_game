@@ -94,7 +94,7 @@ export function unitStatus(ctx, u) {
   if (!atZone(u)) return ["移動中 → " + zi.t, "#8A9583"];
   if (U(ctx)[u.k].role === "mine" && zi.coin) {
     const r = mineRate(ctx, u);
-    return ["挖礦 +$" + r.toFixed(1) + "/s" + (r < zi.yield * 0.8 ? "（遞減）" : ""), "#A3E635"];
+    return ["挖礦 +$" + r.toFixed(1) + "/s" + (r < zi.yield * 0.8 ? "（遞減）" : ""), "#91D500"];
   }
   return ["駐守 " + zi.t, "#8A9583"];
 }

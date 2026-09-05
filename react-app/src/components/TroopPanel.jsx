@@ -2,9 +2,13 @@ import { COINS, UNITS, SPR_OF } from "../game/constants.js";
 import { SPRITES } from "../game/sprites.js";
 import { S, money, posTotal, groupTroops } from "../game/state.js";
 import { useEngineVersion } from "../hooks/useEngineStore.js";
+import { useMediaQuery, TROOP_PANEL_HIDDEN } from "../hooks/useMediaQuery.js";
+import SettleActions from "./SettleActions.jsx";
 
 export default function TroopPanel({ engine }) {
   useEngineVersion(engine);
+  /* 面板自己被 CSS 藏起來的時候不要連結算列一起藏掉——那時候它得回操作列。 */
+  const hidden = useMediaQuery(TROOP_PANEL_HIDDEN);
   const mine = S.units.filter(u => u.alive && u.p === S.myIndex);
   const gs = groupTroops(mine);
   const me = S.players[S.myIndex];
@@ -21,7 +25,7 @@ export default function TroopPanel({ engine }) {
         {gs.map(o => {
           const ch = COINS[o.coin], hot = o.pl >= 12;
           const st = o.fight ? [`交戰中 ${o.fight}/${o.n}`, "#F2555A"]
-            : o.mining ? [`挖礦中 ${o.mining}/${o.n}`, "#A3E635"]
+            : o.mining ? [`挖礦中 ${o.mining}/${o.n}`, "#91D500"]
             : o.moving ? [`移動中 ${o.moving}/${o.n}`, "#8A9583"] : ["駐守中", "#8A9583"];
           return (
             <button className={`trow ${o.sel ? "on" : ""} ${o.fight ? "fight" : ""} ${hot ? "cash" : ""}`}
@@ -35,13 +39,14 @@ export default function TroopPanel({ engine }) {
                   </span>
                 </span>
                 <span className="thp"><i style={{ width: (o.hp * 100).toFixed(0) + "%", background: o.hp > 0.5 ? "var(--lime)" : "var(--down)" }}></i></span>
-                <span className="tst" style={{ color: hot ? "#A3E635" : st[1] }}>{hot ? "可結算" : st[0]} · {money(o.ret)}</span>
+                <span className="tst" style={{ color: hot ? "#91D500" : st[1] }}>{hot ? "可結算" : st[0]} · {money(o.ret)}</span>
               </span>
               <span className="tset" onClick={(e) => doSettle(e, o)}>結</span>
             </button>
           );
         })}
       </div>
+      {!hidden && <div className="actsslot" id="actsSlot"><SettleActions engine={engine} /></div>}
     </aside>
   );
 }

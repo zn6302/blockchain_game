@@ -221,6 +221,19 @@ svg.map.drag{cursor:grabbing}
 @keyframes ultp{0%,100%{box-shadow:0 0 0 0 rgba(145,213,0,0);border-color:rgba(145,213,0,.5)}
   50%{box-shadow:0 0 0 2px rgba(145,213,0,.4);border-color:var(--lime)}}
 
+/* 結算列（#actsCol）平常掛在右側「我的部隊」面板底下——賣掉誰跟賣多少在同一塊，
+   眼睛不用在畫面兩端來回跑。面板被收起來的窄畫面才會退回操作列（見 Dock.jsx）。 */
+.actsslot:empty{display:none}
+.troops #actsCol{flex:none;padding:8px 9px 9px;border-top:1px solid var(--line);
+  background:rgba(255,255,255,.02)}
+.troops #actsCol .lab{font-size:8px;letter-spacing:1px;color:var(--faint);display:block;margin-bottom:5px}
+.troops #actsCol .acts{gap:6px;flex-wrap:wrap;overflow:visible}
+.troops #actsCol .a{width:auto;flex:1 1 0;min-width:0;padding:6px 8px}
+.troops #actsCol .a .t{font-size:10.5px}
+.troops #actsCol .a .d{font-size:8.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 三顆並排在 246px 寬的面板裡會擠到看不懂，產出切換自己佔一排 */
+.troops #actsCol .a#autoBtn{flex-basis:100%}
+
 .acts{display:flex;gap:var(--unit-gap);overflow-x:auto;-webkit-overflow-scrolling:touch}
 .a{width:var(--a-w);flex:none;background:var(--panel-2);border:1px solid var(--line);border-radius:11px;
   padding:7px 9px;text-align:left;display:flex;flex-direction:column;gap:1px;transition:border-color .15s}
@@ -233,12 +246,22 @@ svg.map.drag{cursor:grabbing}
 .cashcol{flex:none;min-width:var(--cash-w)}
 .cash{font-family:var(--mono);font-size:23px;font-weight:700;color:var(--lime);line-height:1;margin-top:1px}
 .ticker{display:flex;flex-direction:column;gap:2px;margin-top:7px}
-.tk{display:grid;grid-template-columns:34px auto auto 1fr;gap:6px;align-items:baseline;
+.tk{display:grid;grid-template-columns:34px auto auto auto 1fr;gap:6px;align-items:center;
   font-family:var(--mono);font-size:9.5px;color:var(--muted)}
 .tk .tkh{text-align:right;font-weight:700}
 .tk b{font-weight:700}
 .tk .tkp{color:var(--txt)}
 .tk.hot{animation:tkhot 1s ease-in-out infinite}
+/* 簡化版只有一種幣，那支幣就是整個市場，所以給它大字價格＋一整條走勢圖；
+   完整版三種幣要能並排比較，維持上面那種一行一支的緊湊排法。 */
+.prow{display:flex;align-items:baseline;gap:7px;font-family:var(--mono);line-height:1}
+.prow .pv{font-size:21px;font-weight:700;color:var(--txt)}
+.prow .pc{font-size:12.5px;font-weight:700}
+.spark{display:block;width:100%;height:26px}
+.tk .spark{width:44px;height:13px;flex:none}
+.phold{font-family:var(--mono);font-size:9.5px;color:var(--muted)}
+.phold b{font-weight:700}
+.ticker.hot .prow .pv{animation:tkhot 1s ease-in-out infinite}
 @keyframes tkhot{0%,100%{opacity:1}50%{opacity:.45}}
 
 .target{position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%);white-space:nowrap;
@@ -449,9 +472,12 @@ svg.map.drag{cursor:grabbing}
   .dockcol .lab{display:none}
   .cashcol{min-width:0;flex-direction:row;align-items:center;gap:10px}
   .cash{font-size:17px;margin:0}
-  .ticker{flex-direction:row;gap:9px;margin:0;flex:1;overflow-x:auto}
-  .tk{display:flex;gap:4px;font-size:9px}
-  .tk .tkh{display:none}
+  .ticker{flex-direction:row;align-items:center;gap:9px;margin:0;flex:1;min-width:0;overflow-x:auto}
+  .prow .pv{font-size:16px}.prow .pc{font-size:10.5px}
+  .spark{width:78px;height:20px;flex:none}
+  .phold{display:none}
+  .tk{display:flex;align-items:center;gap:4px;font-size:9px}
+  .tk .tkh,.tk .spark{display:none}
   .u{padding:5px 3px 4px}
   .u .n{font-size:9px}.u .c{font-size:11px;margin-top:2px}
   .u .k{font-size:7px;top:3px;left:3px}
@@ -517,8 +543,11 @@ svg.map.drag{cursor:grabbing}
   .cashcol{min-width:110px;flex-direction:column;align-items:flex-start;gap:0}
   .cash{font-size:15px;margin:0}
   .ticker{flex-direction:column;gap:1px;margin-top:3px;overflow:visible;flex:none}
+  .prow .pv{font-size:14px}.prow .pc{font-size:9.5px}
+  .spark{height:16px}
+  .phold{font-size:8px}
   .tk{display:grid;grid-template-columns:30px auto auto;gap:4px;font-size:8px}
-  .tk .tkh{display:none}
+  .tk .tkh,.tk .spark{display:none}
   .u{width:54px;padding:4px 2px 3px;border-radius:9px}
   .u .uimg{height:26px}
   .u .n{font-size:8.5px}.u .c{font-size:10.5px;margin-top:2px}
@@ -577,7 +606,8 @@ svg.map.drag{cursor:grabbing}
   .a{padding:9px 11px}
   .a .t{font-size:12.5px}.a .d{font-size:10.5px}.a .p{font-size:11px}
   .cash{font-size:28px}
-  .tk{font-size:11px;grid-template-columns:38px auto auto 1fr}
+  .tk{font-size:11px;grid-template-columns:38px auto auto auto 1fr}
+  .prow .pv{font-size:25px}.prow .pc{font-size:14px}.spark{height:32px}.phold{font-size:11px}
   .dockcol .lab{font-size:11px}
   .target{font-size:12px;padding:5px 14px}
   .dock{padding:12px 15px;border-radius:18px}
@@ -595,6 +625,7 @@ svg.map.drag{cursor:grabbing}
   .u .n{font-size:14px}.u .c{font-size:12.5px}
   .a .t{font-size:14px}.a .d{font-size:12px}.a .p{font-size:12.5px}
   .cash{font-size:34px}.tk{font-size:12.5px}
+  .prow .pv{font-size:29px}.prow .pc{font-size:16px}.spark{height:38px}.phold{font-size:12.5px}
   .troops{width:340px}.tn{font-size:14px}.tst{font-size:11.5px}
   .tg{width:32px;height:32px}.tg img{height:27px}
   .pl .val{font-size:19px}.pl .nm{font-size:15px}

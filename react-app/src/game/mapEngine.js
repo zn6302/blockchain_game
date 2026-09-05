@@ -115,7 +115,7 @@ export function createMapView(svgEl, { onTileClick } = {}) {
       t = {
         n: pixelText(name, 900, 15, '"Noto Sans TC",sans-serif', "#F2F7EE", 3),
         s: pixelText(sub, 400, 8, '"Press Start 2P",monospace', col, 1),
-        edge: type === "base" ? PLAYER_COLORS[owner] : "#A3E635"
+        edge: type === "base" ? PLAYER_COLORS[owner] : "#91D500"
       };
       tipCache.set(idx, t);
     }
@@ -295,7 +295,7 @@ export function createMapView(svgEl, { onTileClick } = {}) {
         const t = r === 0 ? "0" : (up ? "▲" : "▼") + Math.abs(pct);
         if (n.mark.textContent !== t) {
           n.mark.textContent = t;
-          n.mark.setAttribute("fill", r === 0 ? "#F2555A" : (up ? "#A3E635" : "#F2555A"));
+          n.mark.setAttribute("fill", r === 0 ? "#F2555A" : (up ? "#91D500" : "#F2555A"));
         }
         if (big !== n.big) {
           n.big = big;
@@ -306,7 +306,7 @@ export function createMapView(svgEl, { onTileClick } = {}) {
           const txt = (r === 0 ? "歸零" : (pct > 0 ? "+" : "") + pct + "%");
           if (n.plb.textContent !== txt) {
             n.plb.textContent = txt;
-            n.mbg.setAttribute("fill", pct > 0 ? "#A3E635" : "#F2555A");
+            n.mbg.setAttribute("fill", pct > 0 ? "#91D500" : "#F2555A");
             n.plb.setAttribute("fill", pct > 0 ? "#0B1004" : "#FFF2F2");
             n.plg.setAttribute("class", "plg " + (pct > 0 ? "good" : "bad"));
           }
@@ -353,9 +353,12 @@ export function createMapView(svgEl, { onTileClick } = {}) {
             stroke="#050805" stroke-width="2.2" paint-order="stroke">${f.txt}</text></g>`;
       } else if (f.k === "dmg") {
         const rise = (1 - k) * 24;
+        const mine = f.p === S.myIndex, blocked = f.v <= 0;
+        const col = blocked ? "#4FD1C5" : (mine ? "#F2555A" : "#91D500");
+        const txt = blocked ? "0" : (mine ? "-" : "") + f.v;   // 青色的 0 ＝ 鎖倉擋下來了
         s += `<text class="dmgtxt" x="${f.x.toFixed(1)}" y="${(f.y - rise).toFixed(1)}"
-             fill="${f.mine ? "#F2555A" : "#A3E635"}" opacity="${Math.min(1, k * 2.2).toFixed(2)}"
-             stroke="#050805" stroke-width="2.4" paint-order="stroke">${f.mine ? "-" : ""}${f.v}</text>`;
+             fill="${col}" opacity="${Math.min(1, k * 2.2).toFixed(2)}"
+             stroke="#050805" stroke-width="2.4" paint-order="stroke">${txt}</text>`;
       }
     });
     l.innerHTML = s;

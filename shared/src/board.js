@@ -424,7 +424,7 @@ export function tileSVG(idx,myIndex,mode){
   }else if(type==="vault"){
     add(pPier(x-30,y+14,16));
     add(pVault(x+4,y-2,17));
-    add(pSign(x+26,y+12,15,simple?"#5C8A00":"#A3E635","NOX"));
+    add(pSign(x+26,y+12,15,simple?"#5C8A00":"#91D500","NOX"));
   }else if(type==="mountain"){
     add(pRock(x+6,y+10,rg.f(52,64),rg.f(48,60),rg,true));
     add(pRock(x-24,y+16,rg.f(26,36),rg.f(28,36),rg,rg.i(0,2)===0));

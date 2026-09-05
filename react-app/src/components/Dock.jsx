@@ -3,8 +3,10 @@ import { isLocked, lockLeft, ULTS, ULT_CD } from "@noxcat/shared/constants.js";
 import { SPRITES } from "../game/sprites.js";
 import { CLS_ICON } from "../game/classIcons.js";
 import { ZONES } from "@noxcat/shared/board.js";
-import { S, money, posValue, unitWorth, settleValue, costOf, cdMulOf, BASE_INCOME, catchUpMul, groupTroops } from "../game/state.js";
+import { S, clamp, money, posValue, unitWorth, costOf, cdMulOf, BASE_INCOME, catchUpMul, groupTroops } from "../game/state.js";
 import { useEngineVersion } from "../hooks/useEngineStore.js";
+import { useMediaQuery, TROOP_PANEL_HIDDEN } from "../hooks/useMediaQuery.js";
+import SettleActions from "./SettleActions.jsx";
 
 function TargetLine() {
   const u = S.units.find(x => x.id === S.selU && x.alive);
@@ -17,30 +19,84 @@ function TargetLine() {
   /* 簡化版不用選格子，貓自己找路，所以這一行改成講解鎖狀態，不講目標格。 */
   if (S.mode === "simple") {
     if (!S.unlocked) return <>前 <b>60 秒</b>只能挖礦攢錢 — <b style={{ color: "var(--lime)" }}>{lockLeft(S.t)} 秒</b>後解鎖士兵、刺客與巨獸大招</>;
-    return <>貓咪會自己找路 — 礦工去人少的礦區，戰鬥兵去打第一名。點自己的部隊可以結算</>;
+    return <>礦工自己會去礦區、士兵自己會去找對手 — 你只要決定<b>買什麼</b>和<b>什麼時候賣</b></>;
   }
   if (S.sel == null) return <>目標區域：<b>未選擇</b> — 點地圖選格子；點自己的部隊可以結算</>;
   const z = ZINFO[ZONES[S.sel][2]];
   return <>目標：<b>{z.t}</b>{z.coin ? ` · 產出 $${z.yield}/s` : ""} — 部隊從基地走過去，只有傘兵能空降</>;
 }
 
-function Ticker() {
-  return CK.map(k => {
-    const c = COINS[k], chg = (c.price / c.ref - 1) * 100, up = chg >= 0, dead = c.price <= 0.002;
-    const hot = S.trend && S.trend.c === k;
-    let expo = 0, n = 0;
-    S.units.forEach(u => { if (u.alive && u.p === S.myIndex && u.coin === k) { expo += unitWorth(u); n++; } });
-    return (
-      <div className={`tk ${hot ? "hot" : ""}`} key={k}>
-        <b style={{ color: c.hex }}>{k}</b>
-        <span className="tkp">{dead ? "歸零" : "$" + (c.price < 1 ? c.price.toFixed(3) : c.price.toFixed(2))}</span>
-        <span style={{ color: dead ? "var(--down)" : (up ? "var(--up)" : "var(--down)") }}>
+/* 走勢線：把一段價格壓進 w×ht 的框裡。剛開場整段是平的，所以給一個最小幅度，
+   不然除以 0 之後整條線會變成一根尖刺。 */
+function sparkPath(h, w, ht) {
+  if (!h || h.length < 2) return `0,${(ht / 2).toFixed(1)} ${w},${(ht / 2).toFixed(1)}`;
+  const lo = Math.min(...h), hi = Math.max(...h), mid = (hi + lo) / 2;
+  const sp = Math.max(hi - lo, Math.abs(mid) * 0.10, 1e-6);
+  const y0 = mid - sp / 2;
+  return h.map((v, i) => `${(i / (h.length - 1) * w).toFixed(1)},${
+    clamp(ht - 3 - (v - y0) / sp * (ht - 6), 1, ht - 1).toFixed(1)}`).join(" ");
+}
+/* 高度交給 CSS（media query 要調得動），viewBox 只負責座標系與線的粗細 */
+function Spark({ hist, up, w, h }) {
+  return (
+    <svg className="spark" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
+      <polyline points={sparkPath((hist || []).slice(-30), w, h)} fill="none"
+        stroke={up ? "var(--up)" : "var(--down)"} strokeWidth="1.6"
+        strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
+}
+
+/* 幣價欄有兩種長相，差別是這局有幾種幣：
+   簡化版只有一種幣，那支幣就是整個市場，所以給它大字價格＋一整條走勢圖；
+   完整版三種幣要能並排比較，就縮成一行一支、走勢圖跟在行末。 */
+function coinExposure(k) {
+  let expo = 0, n = 0;
+  S.units.forEach(u => { if (u.alive && u.p === S.myIndex && u.coin === k) { expo += unitWorth(u); n++; } });
+  return { expo, n };
+}
+function SoloTicker({ k }) {
+  const c = COINS[k], chg = (c.price / c.ref - 1) * 100, up = chg >= 0, dead = c.price <= 0.002;
+  const hot = !!(S.trend && S.trend.c === k);
+  const { expo, n } = coinExposure(k);
+  return (
+    <div className={`ticker ${hot ? "hot" : ""}`} id="ticker">
+      <div className="prow">
+        <span className="pv">{dead ? "歸零" : "$" + (c.price < 1 ? c.price.toFixed(3) : c.price.toFixed(2))}</span>
+        <span className="pc" style={{ color: dead ? "var(--down)" : (up ? "var(--up)" : "var(--down)") }}>
           {dead ? "✕" : (up ? "▲" : "▼") + Math.abs(chg).toFixed(0) + "%"}{hot ? (S.trend.rate > 0 ? " ⇡" : " ⇣") : ""}
         </span>
-        <span className="tkh" style={{ color: n ? c.hex : "var(--faint)" }}>{n ? money(expo) + "·" + n + "隻" : "—"}</span>
       </div>
-    );
-  });
+      <Spark hist={c.hist} up={up} w={132} h={26} />
+      <div className="phold">場上 <b style={{ color: n ? "var(--lime)" : "var(--faint)" }}>
+        {n ? money(expo) + " · " + n + " 隻" : "沒有貓"}</b></div>
+    </div>
+  );
+}
+function MultiTicker() {
+  return (
+    <div className="ticker" id="ticker">
+      {CK.map(k => {
+        const c = COINS[k], chg = (c.price / c.ref - 1) * 100, up = chg >= 0, dead = c.price <= 0.002;
+        const hot = !!(S.trend && S.trend.c === k);
+        const { expo, n } = coinExposure(k);
+        return (
+          <div className={`tk ${hot ? "hot" : ""}`} key={k}>
+            <b style={{ color: c.hex }}>{k}</b>
+            <span className="tkp">{dead ? "歸零" : "$" + (c.price < 1 ? c.price.toFixed(3) : c.price.toFixed(2))}</span>
+            <span style={{ color: dead ? "var(--down)" : (up ? "var(--up)" : "var(--down)") }}>
+              {dead ? "✕" : (up ? "▲" : "▼") + Math.abs(chg).toFixed(0) + "%"}{hot ? (S.trend.rate > 0 ? " ⇡" : " ⇣") : ""}
+            </span>
+            <Spark hist={c.hist} up={up} w={44} h={13} />
+            <span className="tkh" style={{ color: n ? c.hex : "var(--faint)" }}>{n ? money(expo) + "·" + n + "隻" : "—"}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+function Ticker() {
+  return CK.length === 1 ? <SoloTicker k={CK[0]} /> : <MultiTicker />;
 }
 
 /* 大招：每個身份一顆,長得跟召喚卡完全不一樣（一顆有文字說明的長按鈕），
@@ -77,6 +133,8 @@ function UltButton({ engine, p }) {
 
 export default function Dock({ engine }) {
   useEngineVersion(engine);
+  /* hook 要在 early return 之前呼叫,順序每次 render 都得一樣 */
+  const panelHidden = useMediaQuery(TROOP_PANEL_HIDDEN);
   const p = S.players[S.myIndex];
   if (!p) return null;
 
@@ -91,10 +149,6 @@ export default function Dock({ engine }) {
   const lead = (p.cls && CLASSES[p.cls].lead) || 6;
   const evc = S.trend ? S.trend.c : ((S.pending && S.evtT <= lead && S.evtT > 0) ? S.pending.c : null);
   const now = performance.now();
-
-  const sel = S.units.find(x => x.id === S.selU && x.alive);
-  const settleAllTotal = mineUnits.reduce((s, u) => s + settleValue(u), 0);
-  const autoSell = p.auto === "sell";
 
   return (
     <div className="dock">
@@ -136,7 +190,7 @@ export default function Dock({ engine }) {
       <div className="dockcol cashcol">
         <span className="lab">可用 CASH</span>
         <div className="cash num" id="cashBig">{money(p.cash)}</div>
-        <div className="ticker" id="ticker"><Ticker /></div>
+        <Ticker />
       </div>
       <div className="sep"></div>
       <div className="dockcol">
@@ -171,27 +225,8 @@ export default function Dock({ engine }) {
       </div>
       <div className="sep"></div>
       <UltButton engine={engine} p={p} />
-      <div className="sep"></div>
-      <div className="dockcol">
-        <span className="lab">結算＝賣出</span>
-        <div className="acts">
-          <button className={`a ${!sel ? "off" : ""}`} id="settleOne" onClick={() => engine.settleOne()}>
-            <span className="t">結算 <b style={{ fontFamily: "var(--mono)", fontWeight: 400 }}>Q</b></span>
-            <span className="d" id="settleInfo">{sel ? `${UNITS[sel.k].n} · ${sel.coin}` : "先點自己的部隊"}</span>
-            <span className="p" id="settleVal">{sel ? "取回 " + money(settleValue(sel)) : "—"}</span>
-          </button>
-          <button className={`a ${!mineUnits.length ? "off" : ""}`} id="settleAll" onClick={() => engine.settleAll()}>
-            <span className="t">全部結算 <b style={{ fontFamily: "var(--mono)", fontWeight: 400 }}>E</b></span>
-            <span className="d">撤回所有部隊</span>
-            <span className="p" id="settleAllVal">{mineUnits.length ? "取回 " + money(settleAllTotal) : "—"}</span>
-          </button>
-          <button className="a" id="autoBtn" onClick={() => engine.toggleAuto()}>
-            <span className="t">產出：{autoSell ? "自動賣出" : "自動持有"}</span>
-            <span className="d">{autoSell ? "礦工收益直接換成 Cash" : "收益併進那隻貓身上"}</span>
-            <span className="p">點一下切換 · A</span>
-          </button>
-        </div>
-      </div>
+      {/* 桌機的結算列在右側「我的部隊」面板底下,只有面板被收起來時才回到這裡 */}
+      {panelHidden && <><div className="sep"></div><SettleActions engine={engine} /></>}
     </div>
   );
 }

@@ -101,7 +101,11 @@ export function createGameInstance({ emit, mode = "full" }) {
   let fxBuf = [], sfxBuf = [];
   function fxShot(a, b, col) { fxBuf.push({ k: "shot", x1: a.x, y1: a.y - 8, x2: b.x, y2: b.y - 8, c: col }); }
   function fxHit(x, y, col) { fxBuf.push({ k: "hit", x, y: y - 8, c: col }); }
-  function fxDmg(x, y, v, mine) { fxBuf.push({ k: "dmg", x, y: y - 16, v: Math.max(1, Math.round(v)), mine }); }
+  /* 傷害數字是廣播出去的,伺服器不知道看的人是誰,所以只送「被打的是第幾號座位」,
+     紅字(我被打)還是綠字(我打到人)由每個 client 自己比對。原本這裡寫死 mine:true,
+     結果每個人看到的每一發都是紅色的「-N」,連自己在打對手都像在挨打。
+     v 可以是 0——鎖倉擋下來的那一發,客戶端會畫成一個青色的 0。 */
+  function fxDmg(x, y, v, pi) { fxBuf.push({ k: "dmg", x, y: y - 16, v: Math.max(0, Math.round(v)), p: pi }); }
   function fxKill(x, y, col) { fxBuf.push({ k: "kill", x, y: y - 8, c: col }); }
   function fxCoin(x, y, txt, col) { fxBuf.push({ k: "coin", x: x + (Math.random() * 10 - 5), y: y - 14, txt, c: col }); }
   function sfx(kind, vol) { sfxBuf.push({ kind, vol }); }
@@ -440,7 +444,7 @@ export function createGameInstance({ emit, mode = "full" }) {
             u.combatT = 1.4; tgt.combatT = 1.4; tgt.hitT = 0.2;
             fxShot(u, tgt, PLAYER_COLORS[u.p]);
             fxHit(tgt.x, tgt.y, PLAYER_COLORS[u.p]);
-            fxDmg(tgt.x, tgt.y, shielded ? 0 : dmg, true);
+            fxDmg(tgt.x, tgt.y, shielded ? 0 : dmg, tgt.p);
             sfx("shot", 0.8);
             if (!shielded && tgt.hp <= 0) {
               tgt.alive = false;
@@ -473,7 +477,7 @@ export function createGameInstance({ emit, mode = "full" }) {
           u.mineFx = 0.55;
           const c = COINS[u.coin];
           fxCoin(u.x, u.y, hold ? "+" + (usd / c.price).toFixed(2) + " " + u.coin : "+$" + usd.toFixed(1),
-            hold ? c.hex : "#A3E635");
+            hold ? c.hex : "#91D500");
           sfx("coin", 0.55);
         }
       }
