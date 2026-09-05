@@ -89,6 +89,7 @@ export function createEngine() {
     S.evtT = state.evtT;
     S.hint = state.hint;
     S.roomCode = state.code;
+    S.hostIndex = typeof state.hostIndex === "number" ? state.hostIndex : -1;
     setMode(state.mode);
     S.unlocked = state.unlocked;
     S.pending = state.pending ? { c: state.pending.c, f: state.pending.f, w: state.pending.w, t: state.pending.t } : null;

@@ -74,6 +74,7 @@ export const GameState = schema({
   code: t.string().default(""),         // 房號,建房時由 client 產生並當成 filterBy 的鍵
   mode: t.string().default("full"),     // "full" | "simple",建房時決定,整局不變
   unlocked: t.boolean().default(true),  // 簡化版前 60 秒鎖戰鬥兵;完整版恆為 true
+  hostIndex: t.int8().default(-1),      // 房主座位(第一個進來的人),只有他能按開始
   coins: t.map(CoinState),
   units: t.array(UnitState),
   players: t.array(PlayerState),

@@ -9,7 +9,7 @@ export const S = {
   phase: "entry",                   // "entry" | "connecting" | "lobby" | "playing" | "ended"
   connected: false, connectError: null,
   roomCode: "",                     // 目前這間房的房號(伺服器 state.code)
-  mySessionId: null, myIndex: null,
+  mySessionId: null, myIndex: null, hostIndex: -1,
   mode: "full", unlocked: true,      // 這局的模式與「戰鬥兵是否已解鎖」(簡化版才會是 false)
   t: 180, running: false, sel: null, selU: null,
   units: [], players: [], over: false,
@@ -23,7 +23,7 @@ export const S = {
 export function resetRoomState() {
   Object.assign(S, {
     phase: "entry", connected: false, connectError: null, roomCode: "",
-    mySessionId: null, myIndex: null,
+    mySessionId: null, myIndex: null, hostIndex: -1,
     mode: "full", unlocked: true,
     t: 180, running: false, selU: null,
     units: [], players: [], over: false,
