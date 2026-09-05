@@ -58,8 +58,10 @@ export default function MapStage({ engine }) {
 
   return (
     <div className="stage">
-      <svg className="map" id="map" ref={svgRef} viewBox="0 0 940 640" preserveAspectRatio="xMidYMid slice"
-        role="img" aria-label="六邊形戰場"></svg>
+      <div className="mapwrap">
+        <svg className="map" id="map" ref={svgRef} viewBox="0 0 940 640" preserveAspectRatio="xMidYMid slice"
+          role="img" aria-label="六邊形戰場"></svg>
+      </div>
 
       <Legend engine={engine} />
       <div className="zoomctl">
@@ -69,7 +71,12 @@ export default function MapStage({ engine }) {
         <button title="音效" className={SFX.on ? "on" : ""} onClick={() => engine.toggleSfx()}>{SFX.on ? "🔊" : "🔇"}</button>
       </div>
       <div className={`intro ${introOn ? "on" : ""}`} id="intro">這是你的基地</div>
-      <EventBar engine={engine} />
+      {/* 手機直式:事件卡不再蓋住地圖左上角,改成貼齊地圖上緣的一整條;
+          沒有事件時整條收成 0,地圖吃滿。桌機 .ctxstrip 是 display:contents,
+          事件卡照舊浮在地圖上。 */}
+      <div className="ctxstrip">
+        <EventBar engine={engine} />
+      </div>
       <Toast />
 
       <TroopPanel engine={engine} />
