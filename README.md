@@ -1,6 +1,6 @@
 # NOXFLOW
 
-![GIF](demo_gif.gif)
+![GIF](./demo_asset/demo_gif.gif)
 
 ## Problem and Goal
 
@@ -11,48 +11,45 @@ volatility, and leverage through play. The goal is not to teach professional
 trading, but to build enough foundational understanding and curiosity for
 players to continue learning about the field.
 
-We have made NOXFLOW. A resource management autobattler where you fight four other players by watching where the market is moving, placing purchases and liquidating by summoning cute cats into our hand-crafted hexagonal arena. The game is fully online and supports real time multiplayer up to 4 players, each with diverse classes and strategies. NOXFLOW is meant to make investment seem more apporachable and less distant to the general public. After each match, a simple debrief connects the game played with the 
+We have made NOXFLOW. A resource management autobattler where you fight four other players by watching where the market is moving, placing purchases and liquidating by summoning cute cats into our hand-crafted hexagonal arena. The game is fully online and supports real time multiplayer up to 4 players, each with diverse classes and strategies. NOXFLOW is meant to make investment seem more apporachable and less distant to the general public. After each match, a simple debrief connects the game played with the real financial concepts behind it.
 
 ## Core Features
 
-**The game is live.** NOXCAT ARENA is fully deployed at
+**The game is live.** NOXFLOW is fully deployed at
 [noxcat-arena.fly.dev](https://noxcat-arena.fly.dev/) with real-time online
-matchmaking. Open the link, press one button, and you are in a match against real
-people within seconds. The game supports both mobile and laptop viewports.
+matchmaking. Press one button and you are in a match against real people within
+seconds, on desktop or phone.
 
-- **Real-time multiplayer that is already running:** Hit *quick match* and the
-  server drops you into a public room with whoever else is waiting, or draw a
-  four-digit room code and hand it to your friends for a private lobby. Every
-  match is an authoritative server room, so nobody can bend the market from their
-  own browser. Empty seats are filled by AI traders — 巨鯨_0x7f, 散戶聯盟, 做市商
-  MM — and if someone's connection drops mid-match, a bot takes the wheel
-  instantly while the player gets twenty seconds to fight their way back in.
-- **An auto-battler where every unit is an open position:** You never
-  micromanage. Summoning a cat *is* buying simulates making transactions in cryptocurreny. The cat carries the quantity it
-  bought and the price it paid, walks off to mine or hunt on its own, and loses
-  value as it takes damage. Settling it *is* selling at spot. Your portfolio is
-  not a menu; it is standing on the battlefield, and you can watch it get shot.
-- **A hand-drawn isometric world, not a spreadsheet:** Sixty-one hexes of
-  pixel-art terrain — deep pits paying $13/s, quiet little claims paying $6/s, an
-  exchange that halves your trading fees, energy peaks that cut your cooldowns,
-  forests and dead chains that pay nothing at all. Cats, ore carts, vaults, and
-  smoke-puffing houses are all drawn as SVG from shared geometry, so the board is
-  crisp at any zoom on desktop or phone.
+- **Real-time multiplayer, already running:** Quick match drops you in with
+  whoever is waiting, or share a four-digit code for a private lobby. Rooms are
+  server-authoritative, so nobody bends the market from their own browser. AI
+  traders — 巨鯨_0x7f, 散戶聯盟, 做市商 MM — fill empty seats, and a dropped player
+  has twenty seconds to reconnect before a bot keeps the chair.
+![Matchmaking screen](./demo_asset/matchmaking.png)
+- **An auto-battler where every unit is an open position:** Summoning a cat is a
+  buy. It carries the quantity and the price it paid, mines and fights on its
+  own, and loses value as it takes damage. Settling it is a sell. Your portfolio
+  is not a menu — it is standing on the battlefield, and you can watch it get shot.
+- **A hand-drawn isometric world, not a spreadsheet:** Sixty-one pixel-art hexes
+  — $13/s pits, $6/s claims, an exchange that halves your fees, energy peaks that
+  cut cooldowns. Every cat, ore cart, and vault is drawn as SVG from shared
+  geometry, so the board stays crisp at any zoom.
+![World_view](./demo_asset/world.png)
 - **A market that pushes back:** One currency, one chart, one truth for everyone
-  at the table. Trends drift, six headline events swing NOX between a 1.85×
-  meme-frenzy pump and a 0.55× unlock dump — and your own orders move the price,
-  so the whale who all-ins is the whale who slips their own fill.
-- **Money is your health bar:** There is no separate HP pool for players. Your
-  cash *is* your life. Overtrade, over-leverage, or get raided, and you are
-  eliminated. The richest survivor at the three-minute bell wins, unrealized
-  positions marked to market.
-- **Sixty seconds of peace, then the knives come out:** Combat units stay locked
-  for the first minute, so every match opens as a pure economy race and only then
-  turns into a fight over other people's mines.
-- **Four classes, four real investing lives:** Every class is a different answer
-  to "where does your money come from, and how much volatility can you survive?"
-  Each has one signature move on a 60-second cooldown — roughly three uses per
-  match — and each move is a real strategy, not a fantasy spell.
+  at the table. Six headlines swing NOX between a 1.85× meme pump and a 0.55×
+  unlock dump, and your own orders move the price — the whale who all-ins slips
+  their own fill.
+- **Money is your health bar:** Cash is life. Hit zero and you are out. The
+  richest survivor at the three-minute bell wins, open positions marked to market.
+- **Sixty seconds of peace, then knives:** Combat units stay locked for the first
+  minute, so every match opens as an economy race before it turns into a fight
+  over someone else's mines.
+- **Four classes, four real investing lives:** Each is a different answer to
+  "where does your money come from, and how much volatility can you survive?"
+  Each carries one signature move on a 60-second cooldown, and every move is a
+  real strategy rather than a fantasy spell.
+
+![Class_choosing](./demo_asset/char_selection.png)
 
 | Class | Real-world archetype | The hand you are dealt | Signature move |
 | --- | --- | --- | --- |
@@ -61,20 +58,20 @@ people within seconds. The game supports both mobile and laptop viewports.
 | **梭哈青年** · The Degen | All-or-nothing leverage chaser | $900, cheap units, gains *and* losses doubled | **All-In** — the entire cash balance into a single titan |
 | **消息靈通** · The Insider | Trades on information, pays for access | $800, the highest fees on the board, sees news twice as early | **Alpha** — learn the next headline immediately, then hold it back 8 seconds while you position |
 
-- **A post-match debrief that names what you just did:** The result screen ranks
-  the table, shows how far you moved from your starting capital, then translates
-  your own three minutes into vocabulary — *dollar-cost averaging*, *staking*,
-  *position sizing*, *information edge* — using the plays you actually made. That
-  is the whole point: the finance lesson arrives *after* the fun, attached to a
-  memory of winning or blowing up.
+- **A debrief that names what you just did:** The result screen ranks the table,
+  shows how far you moved from your starting capital, and translates your own
+  three minutes into *dollar-cost averaging*, *staking*, *position sizing*, and
+  *information edge*. The lesson lands after the fun, attached to a memory of
+  winning or blowing up.
+
+![debrief](./demo_asset/debrief.png)
 
 ## System Architecture
 
-NOXCAT ARENA is a server-authoritative multiplayer game. One match is one
-Colyseus room, and that room owns the only real copy of the simulation. Each
-browser is a thin client that mirrors the room state and sends commands. No
-decision about money, combat, mining, or prices is ever made on a player's
-machine.
+NOXFLOW is server-authoritative: one match is one Colyseus room, and that room
+owns the only real copy of the simulation. Every browser is a thin client that
+mirrors room state and sends commands — no decision about money, combat, mining,
+or prices is ever made on a player's machine.
 
 The repository is a single npm workspace containing three packages:
 
@@ -138,61 +135,51 @@ flowchart TB
     SH -.-> C2
 ```
 
-**Joining a match.** Rooms are registered under one room type and filtered by
-room code, so a client only ever matches into a room that was created with the
-same code. Creating a room draws a random four-digit code and joins or creates,
-which means two players who happen to draw the same number share one room
-instead of opening two rooms with the same code. Joining by code only joins, so
-a wrong code fails instead of silently opening an empty room. Public matchmaking
-is the same mechanism with the reserved code `0001`.
+**Joining a match.** Rooms are filtered by room code, so a client only ever
+matches into a room created with the same code. Creating a room draws a random
+four-digit code and *joins or creates*, so two players who happen to draw the
+same number share one room instead of opening two. Joining by code only *joins*,
+so a wrong code fails instead of silently opening an empty room. Public
+matchmaking is the same mechanism on the reserved code `0001`.
 
-**Inside a room.** A room holds exactly four seats. Every seat begins as a
-computer-controlled player and is claimed by the next client that joins. The
-first client to arrive becomes the host, and host status passes to a remaining
-player if the host leaves. The match begins when the host presses start or when
-all four seats hold human players, and the room locks at that point. Leaving
-during the lobby frees the seat again; leaving during a match returns the seat to
-the computer immediately and opens the reconnection window.
+**Inside a room.** Four seats, each starting as a bot and claimed by the next
+client to join. The first arrival becomes host, and host passes to a remaining
+player if they leave. The match starts when the host presses start or all four
+seats hold humans, and the room then locks. Leaving during the lobby frees the
+seat; leaving mid-match returns it to a bot and opens the reconnection window.
 
-**The simulation loop.** Once the match starts, the room runs a fixed 60 Hz
-timestep that advances combat, mining, and the countdown. Prices and market
-events advance on their own slower cadence, and queued visual and sound effects
-are flushed about ten times per second. After every tick, `sync.js` copies the
-simulation into the Colyseus schema, which Colyseus broadcasts to clients as
-patches twenty times per second. The match ends when the clock runs out or only
-one player is left alive, and the room then sends each player a personal summary.
+**The simulation loop.** The room runs a fixed 60 Hz timestep advancing combat,
+mining, and the countdown, with prices and market events on their own slower
+cadence. After each tick, `sync.js` copies the simulation into the Colyseus
+schema, which is broadcast to clients as patches twenty times per second. The
+match ends on the clock or the last player standing, and every player receives a
+personal summary.
 
-**Two shapes of state on the server.** `game.js` keeps its state as ordinary
-JavaScript objects, because the shared balance formulas are written against
-ordinary objects and are reused unchanged in the browser. The Colyseus schema in
-`schema/GameState.js` is a separate and deliberately smaller structure holding
-only what clients actually need. `sync.js` is the one-way bridge between them,
-which keeps simulation, synchronization, and networking as three separate
-concerns. Anything that is a one-off event rather than a state — hit effects,
-sounds, notifications, and the end-of-match report — is sent as a room message
-instead of being placed in the schema, and the price history behind the chart is
-rebuilt locally by each client rather than resent on every tick.
+**Two shapes of state on the server.** `game.js` keeps plain JavaScript objects,
+because the shared balance formulas are written against plain objects and reused
+unchanged in the browser. The schema in `schema/GameState.js` is a separate,
+deliberately smaller structure holding only what clients need, and `sync.js` is
+the one-way bridge between them — keeping simulation, synchronization, and
+networking as three separate concerns. One-off events such as hit effects,
+sounds, notifications, and the end-of-match report travel as room messages rather
+than state, and the chart's price history is rebuilt locally by each client
+instead of being resent every tick.
 
 **The client mirror.** `engine.js` is the only module that knows the game is
-networked. It writes incoming schema state into a single local object whose shape
-matches the server's, and it turns player input into room messages. Components
-read that object and re-render through a `useSyncExternalStore` subscription, so
-the interface never needs to know where the data came from. A separate animation
-frame loop drives the SVG map, so movement and effects stay smooth between
-network patches.
+networked: it writes incoming state into a single local object shaped like the
+server's, and turns player input into room messages. Components read that object
+through a `useSyncExternalStore` subscription, and a separate animation-frame
+loop drives the SVG map so motion stays smooth between patches.
 
 **One copy of the rules.** The `shared` package holds the board layout, the unit
-and class tables, and the balance formulas. The server imports it to decide
-outcomes and the client imports it to display costs, ranges, and position values,
-so the number shown on a card is produced by exactly the same code that the
-server will charge the player.
+and class tables, and the balance formulas. The cost shown on a card is produced
+by exactly the same code the server uses to charge for it.
 
-**One origin in production.** The Docker image builds the frontend and ships it
-next to the server, and a single Node process serves both the page and the
-WebSocket connection on one port. Players therefore need only one URL, and a
-secure page upgrades to a secure WebSocket automatically. In development the Vite
-dev server and the game server run on separate ports, and the client selects the
-correct endpoint for each case.
+**One origin in production.** The Docker image ships the built frontend beside
+the server, and one Node process serves both the page and the WebSocket on a
+single port — one URL for players, with secure pages upgrading to `wss`
+automatically. In development, Vite and the game server run on separate ports and
+the client picks the correct endpoint.
 
 ## Technologies Used
 
@@ -274,18 +261,19 @@ npm run build
 - [Express](https://expressjs.com/) — MIT License.
 - [Fly.io](https://fly.io/) — hosting platform for the deployed demo.
 - No API keys, tokens, personal information, or external market data are required.
-- Any additional visual or audio assets must be documented here before release.
+- All in-game art, sprites, and sound are original work by the team.
 
 ## Team Members
 
 | Name | Responsibility |
-| 楊芷翎 | UI, game designer, and prototyping |
-| 梁家祥 | System Engineer |
-| 葉子倪 | Frontend animation and fullstack engineer |
-| 沈采葳 | Frontend design and User experience |
-| 陳聖文 | Fullstack engineer, deployment, and CICD |
+| --- | --- |
+| 楊芷翎 | UI design, game design, and prototyping |
+| 梁家祥 | Systems engineering |
+| 葉子倪 | Frontend animation and full-stack engineering |
+| 沈采葳 | Frontend design and user experience |
+| 陳聖文 | Full-stack engineering, deployment, and CI/CD |
 
 ## License
 
-No project license has been selected yet. Add a `LICENSE` file at the repository
-root and replace this section with the chosen license name before distribution.
+NOXFLOW is released under the MIT License. The full text is in
+[LICENSE](LICENSE) at the repository root.
