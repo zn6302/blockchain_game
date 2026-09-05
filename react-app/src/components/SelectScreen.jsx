@@ -11,10 +11,10 @@ export default function SelectScreen({ onPick }) {
           <img className="ipcat" src={IP_CAT} alt="NoxFlow" />
           <img className="ipword" src={NOX_WORD} alt="NoxFlow" />
         </div>
-        <div className="eyebrow">簡化版 · 3 分鐘 · 4 人</div>
+        <div className="eyebrow">3 分鐘 · 4 人</div>
         <RoomCode />
         <h3>買貓咪＝買幣，結算＝賣幣</h3>
-        <p className="lead">三分鐘，最有錢的人贏。剩下的進去再說。</p>
+        <p className="lead">最有錢的人贏，剩下的進去再說。</p>
         <div className="pick">你是哪一種投資人？</div>
         {/* 身份現在還決定你的大招，所以每張卡下面多一條寫清楚那一招是什麼——
             這是選身份時最該知道的事，不能等到進場才在操作列上發現。 */}

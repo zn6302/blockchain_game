@@ -49,12 +49,17 @@ export default function EntryScreen({ engine }) {
             placeholder="0000"
             aria-label="房號"
           />
-          <button className="btn" type="submit" disabled={busy || !ready}>加入</button>
+          {/* 「加入」不用綠底:一個畫面上只能有一顆主要按鈕,不然綠色就不再代表
+              「這是我們希望你按的那顆」。填滿房號後 disabled 解除就是足夠的訊號。 */}
+          <button className="btn ghost" type="submit" disabled={busy || !ready}>加入</button>
         </form>
 
+        {/* 這顆進的是共用的公開房:有人在等就一起打,沒人就是電腦補滿。
+            叫「隨機配對」會讓人以為要等真人配對成功,結果是進去就開打——
+            「直接開始」講的是真正的賣點:不用等。 */}
         <div className="foot" style={{ justifyContent: "center", marginTop: 14 }}>
           <button className="btn ghost" disabled={busy} onClick={() => run(() => engine.quickMatch())}>
-            隨機配對
+           直接開始！ 
           </button>
         </div>
       </div>

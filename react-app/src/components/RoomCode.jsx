@@ -12,7 +12,7 @@ export default function RoomCode() {
 
   if (!code) return null;
   if (isPublicCode(code)) {
-    return <div className="roomcode"><span className="roomcode-label">隨機配對房</span></div>;
+    return <div className="roomcode"><span className="roomcode-label">公開房</span></div>;
   }
 
   const copy = () => {
