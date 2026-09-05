@@ -130,6 +130,14 @@ export function createGameInstance({ emit }) {
   function fxDmg(x, y, v, pi) { fxBuf.push({ k: "dmg", x, y: y - 16, v: Math.max(0, Math.round(v)), p: pi }); }
   function fxKill(x, y, col) { fxBuf.push({ k: "kill", x, y: y - 8, c: col }); }
   function fxCoin(x, y, txt, col) { fxBuf.push({ k: "coin", x: x + (Math.random() * 10 - 5), y: y - 14, txt, c: col }); }
+  /* 大招的發動演出。跟其他 fx 一樣廣播給全場——對手在鎖倉、誰把家當全押成巨獸,
+     這是所有人都該看得見的事,藏起來只會讓場面變得莫名其妙。u 是招式代號(順便
+     借用來標 dca 每一拍的小脈衝),client 靠它決定畫哪一套;存活時間照舊由 client 補。 */
+  function fxUlt(u, x, y, col, pi) { fxBuf.push({ k: "ult", u, x, y, c: col, p: pi }); }
+  function baseXY(pi) {
+    const b = ZONES.findIndex(z => z[2] === "base" && z[3] === pi);
+    return b < 0 ? { x: 0, y: 0 } : hexXY(ZONES[b][0], ZONES[b][1]);
+  }
   function sfx(kind, vol) { sfxBuf.push({ kind, vol }); }
   function toast(msg, kind, ms, targetPi) { emit("toast", { msg, kind, ms }, targetPi); }
   function flushEvents() {
@@ -257,6 +265,9 @@ export function createGameInstance({ emit }) {
     toast(`<b>ALL-IN</b>：${p.name} 把 ${money(stake)} 全押 ${u.coin}，巨獸出場`, "warn", 3600);
     p.cash = 0; p.allin = true; p.ultCd = ULT_CD;
     spawn(pi, "titan", target, false, { coin: u.coin, stake });
+    const b = baseXY(pi);
+    fxUlt("degen", b.x, b.y, ULTS.degen.hex, pi);
+    sfx("ult", 1); sfx("kill", 1);
     priceImpact(u.coin, stake * 1.6);
   }
 
@@ -281,7 +292,11 @@ export function createGameInstance({ emit }) {
     p.ultCd = ULT_CD;
     const st = priv[pi].stats;
     st.ult = p.cls; st.ultN++;
-    sfx("warn", 1);
+    /* 三招的規則各不相同,但「發動」這件事本身是同一個動作:從自己的基地放出去。
+       畫成什麼樣子是 client 的事,伺服器只說「誰、在哪裡、放了哪一招」。 */
+    const b = baseXY(pi);
+    fxUlt(p.cls, b.x, b.y, ULTS[p.cls].hex, pi);
+    sfx("ult", 1);
     if (p.cls === "office") {
       p.dca = { t: DCA_T, acc: DCA_EVERY - 0.1 };
       toast(`💵 <b>定期定額</b>啟動：接下來 ${DCA_T} 秒每 ${DCA_EVERY} 秒自動買一隻礦工，不看幣價`, "warn", 4200, pi);
@@ -386,6 +401,10 @@ export function createGameInstance({ emit }) {
           st.buys++; st.invested += cost; st.spend[UNITS.miner.coin] += cost;
           spawn(p.i, "miner", defaultTarget(p.i, "miner"), false, { coin: UNITS.miner.coin, stake: cost });
           priceImpact(UNITS.miner.coin, cost);
+          /* 每一拍都在基地打一個小脈衝:定期定額的重點是「節奏」,
+             看得到那個固定的拍子,才知道這 24 秒裡機器一直在幫你買。 */
+          const b = baseXY(p.i);
+          fxUlt("dca", b.x, b.y, ULTS.office.hex, p.i);
           sfx("buy", 0.6);
         }
       }
@@ -531,6 +550,11 @@ export function createGameInstance({ emit }) {
         const k = Math.random() < 0.6 ? "soldier" : "guard";
         p.allin = true; const stake = p.cash; p.cash = 0;
         spawn(p.i, "titan", defaultTarget(p.i, k), false, { coin: UNITS[k].coin, stake });
+        /* bot 走的是自己那條 all-in,不經過 useUlt,但落地的是同一隻巨獸——
+           少了震波,玩家會覺得對面的巨獸是憑空長出來的。 */
+        const b = baseXY(p.i);
+        fxUlt("degen", b.x, b.y, ULTS.degen.hex, p.i);
+        sfx("ult", 0.8); sfx("kill", 0.8);
       }
     });
 

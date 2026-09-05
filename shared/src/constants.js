@@ -52,25 +52,28 @@ export const ALLIN_MIN = 300;
 /* 一個身份一招，冷卻 60 秒（一場三分鐘 ≈ 放得了三次）。招式本身就是那個身份
    在現實裡對應的投資行為，賽後的 lessons 會把它翻成名詞講給玩家聽。
    min = 發動所需的最低 Cash（不足就按不下去，梭哈青年是把 Cash 全押出去）。 */
+/* hex = 這一招在場上的代表色。發動特效由伺服器廣播、client 畫在地圖上,
+   顏色跟著招式走而不是跟著座位走——四個人可能選到同一個身份,但同一招
+   在誰手上都該長一樣,看到那個顏色就知道現在場上發生的是哪一件事。 */
 export const ULT_CD = 60;
 export const ULTS = {
   office: {
-    n: "定期定額", g: "DCA", spr: "pro", min: 120,
+    n: "定期定額", g: "DCA", spr: "pro", min: 120, hex: "#91D500",
     d: "24 秒內每 3 秒自動買一隻礦工，不管幣價漲跌",
     term: "定期定額 · DCA"
   },
   saver: {
-    n: "鎖倉", g: "STAKE", spr: "guard", min: 0,
+    n: "鎖倉", g: "STAKE", spr: "guard", min: 0, hex: "#4FD1C5",
     d: "12 秒內你的貓不會受傷，期間結算保證不虧本",
     term: "質押鎖倉 · Staking"
   },
   degen: {
-    n: "巨獸 ALL-IN", g: "ALLIN", spr: "titan", min: ALLIN_MIN,
+    n: "巨獸 ALL-IN", g: "ALLIN", spr: "titan", min: ALLIN_MIN, hex: "#F5A524",
     d: "手上的 Cash 全押，召喚一隻巨獸",
     term: "部位大小 · Position Sizing"
   },
   insider: {
-    n: "內線消息", g: "ALPHA", spr: "assassin", min: 0,
+    n: "內線消息", g: "ALPHA", spr: "assassin", min: 0, hex: "#E2557A",
     d: "立刻知道下一則新聞，而且它 8 秒後才發動",
     term: "資訊優勢 · Information Edge"
   }

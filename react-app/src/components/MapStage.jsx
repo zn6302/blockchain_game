@@ -8,6 +8,7 @@ import Toast from "./Toast.jsx";
 import EventBar from "./EventBar.jsx";
 import TroopPanel from "./TroopPanel.jsx";
 import Dock from "./Dock.jsx";
+import UltCast from "./UltCast.jsx";
 
 function Legend({ engine }) {
   useEngineVersion(engine);
@@ -78,6 +79,7 @@ export default function MapStage({ engine }) {
         <EventBar engine={engine} />
       </div>
       <Toast />
+      <UltCast engine={engine} />
 
       <TroopPanel engine={engine} />
       <Dock engine={engine} />

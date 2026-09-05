@@ -166,6 +166,48 @@ svg.map.drag{cursor:grabbing}
 .toast.warn{border-color:rgba(245,165,36,.55)}
 .toast.bad{border-color:rgba(242,85,90,.55)}
 
+/* ---------- 大招橫幅 ----------
+   自己放招時蓋在地圖中央的一張卡（別人放招只有地圖上的特效，見 mapEngine 的 ULT_FX）。
+   顏色由 --ucol 帶進來，就是 shared/constants.js 裡那一招的 hex，跟場上的特效同一個色。
+   整段是一次性的 animation：衝進來 → 撐住 → 往上淡出，放完自己消失，
+   所以元件那邊不必另外開 timer 收它。 */
+/* 位置壓在 toast 底下、地圖中央的上方——正中間會蓋住剛剛放招的那塊地,
+   玩家等於看不到自己按出來的特效。 */
+.ultcast{position:absolute;left:50%;top:clamp(104px,17%,168px);transform:translateX(-50%);
+  z-index:7;pointer-events:none;
+  display:flex;align-items:center;gap:11px;max-width:min(92%,360px);
+  padding:9px 18px 9px 12px;border-radius:14px;overflow:hidden;
+  background:linear-gradient(90deg,rgba(9,13,9,.96),rgba(9,13,9,.8));
+  border:1px solid var(--ucol);
+  box-shadow:0 10px 34px rgba(0,0,0,.6),0 0 26px -6px var(--ucol);
+  animation:uccast 2s cubic-bezier(.2,.9,.25,1) both}
+.ultcast img{height:40px;width:40px;image-rendering:pixelated;flex:none;
+  filter:drop-shadow(0 0 6px var(--ucol))}
+.ultcast .uctext{display:flex;flex-direction:column;gap:1px;min-width:0}
+.ultcast .ucg{font-style:normal;font-family:var(--mono);font-size:8.5px;letter-spacing:2.6px;color:var(--ucol)}
+.ultcast .ucn{font-size:clamp(15px,3.6vw,19px);font-weight:900;letter-spacing:1px;color:#F6F6F6}
+/* 掃過去的那道光：只在最前面一段出現，用來標「就是現在」。 */
+.ultcast::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.16) 46%,transparent 62%);
+  background-size:280% 100%;animation:ucshine 1.1s ease-out both}
+@keyframes uccast{
+  0%{opacity:0;transform:translateX(-50%) scale(.82)}
+  12%{opacity:1;transform:translateX(-50%) scale(1.06)}
+  22%{transform:translateX(-50%) scale(1)}
+  74%{opacity:1;transform:translateX(-50%) scale(1)}
+  100%{opacity:0;transform:translateX(-50%) translateY(-10px) scale(1.04)}}
+@keyframes ucshine{
+  0%{background-position:120% 0;opacity:0}
+  18%{opacity:1}
+  100%{background-position:-40% 0;opacity:0}}
+/* 會暈的人只留淡入淡出：資訊要看得到，但不要有東西衝過來。
+   （地圖上的鏡頭震動另外在 mapEngine.shake() 裡擋掉。） */
+@media (prefers-reduced-motion:reduce){
+  .ultcast{animation:ucstill 2s linear both}
+  .ultcast::after{display:none}
+  @keyframes ucstill{0%{opacity:0}6%,86%{opacity:1;transform:translateX(-50%)}
+    100%{opacity:0;transform:translateX(-50%)}}}
+
 /* ---------- dock (bottom of the map) ---------- */
 .dock{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);display:flex;align-items:stretch;
   gap:var(--dock-gap);background:rgba(7,10,7,.9);border:1px solid var(--line);border-radius:16px;

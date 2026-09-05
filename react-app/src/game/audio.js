@@ -6,7 +6,7 @@ export function sfxInit() {
 }
 export function sfx(kind, vol) {
   if (!SFX.on || !SFX.ac) return;
-  const now = SFX.ac.currentTime, gap = { shot: 0.07, hit: 0.07, kill: 0.12, buy: 0.05, sell: 0.05, warn: 0.4, coin: 0.16 }[kind] || 0.08;
+  const now = SFX.ac.currentTime, gap = { shot: 0.07, hit: 0.07, kill: 0.12, buy: 0.05, sell: 0.05, warn: 0.4, coin: 0.16, ult: 0.5 }[kind] || 0.08;
   if (SFX.last[kind] && now - SFX.last[kind] < gap) return;
   SFX.last[kind] = now;
   const ac = SFX.ac, g = ac.createGain(), o = ac.createOscillator();
@@ -18,6 +18,9 @@ export function sfx(kind, vol) {
   if (kind === "sell") { f0 = 760; f1 = 380; dur = 0.14; type = "triangle"; }
   if (kind === "warn") { f0 = 300; f1 = 300; dur = 0.30; type = "sine"; v *= 1.3; }
   if (kind === "coin") { f0 = 980; f1 = 1460; dur = 0.06; type = "triangle"; v *= 0.6; }
+  /* 大招:比 warn 更長更亮的一記上揚,而且是往上掃的——場上唯一會往上掃的聲音,
+     不用看畫面也知道「有人放招了」。 */
+  if (kind === "ult") { f0 = 220; f1 = 1320; dur = 0.42; type = "square"; v *= 1.4; }
   o.type = type; o.frequency.setValueAtTime(f0, now);
   o.frequency.exponentialRampToValueAtTime(Math.max(30, f1), now + dur);
   g.gain.setValueAtTime(v, now);
