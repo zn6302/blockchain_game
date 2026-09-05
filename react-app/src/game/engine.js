@@ -233,8 +233,9 @@ export function createEngine() {
     flashUnit("ult");
     room && room.send("useUlt");
   }
+  /* 沒選單位也照送:該不該罵人由伺服器決定,client 這邊自己 return 掉的話
+     玩家會覺得按鈕壞了(按了完全沒反應,連提示都沒有)。 */
   function settleOne() {
-    if (S.selU == null) return;
     room && room.send("settleOne", { unitId: S.selU });
   }
   function settleAll() { room && room.send("settleAll"); }

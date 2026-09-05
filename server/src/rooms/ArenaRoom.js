@@ -141,6 +141,7 @@ export class ArenaRoom extends Room {
 
     this.state.phase = "playing";
     this.state.running = true;
+    this.game.startTutorial();
 
     let priceAcc = 0, flushAcc = 0;
     this.setTimestep((deltaMs) => {
