@@ -27,7 +27,7 @@ export default function MapStage({ engine }) {
   const [introOn, setIntroOn] = useState(true);
 
   useEffect(() => {
-    const view = createMapView(svgRef.current, { onTileClick: (idx) => engine.selectTile(idx) });
+    const view = createMapView(svgRef.current);
     viewRef.current = view;
     engine.setMapView(view);
     view.render();
@@ -40,6 +40,7 @@ export default function MapStage({ engine }) {
       if (!S.running) return;
       const i = parseInt(e.key, 10);
       if (i >= 1 && i <= ROSTER.length) { engine.summon(ROSTER[i - 1]); return; }
+      if (i === ROSTER.length + 1) { engine.useUlt(); return; }   // 6 = 大招
       const k = e.key.toLowerCase();
       if (k === "q") engine.settleOne();
       if (k === "e") engine.settleAll();

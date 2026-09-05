@@ -1,27 +1,17 @@
 /* ============================ 資料 ============================ */
-/* COINS 是有狀態的(price 會變動),所以用 factory 產生——client 每個分頁一份、
+/* 全場只有一種幣：不會有「押錯幣種」這件事，漲跌就是所有人共同的行情。
+   COINS 是有狀態的(price 會變動),所以用 factory 產生——client 每個分頁一份、
    server 每個房間一份,彼此獨立,不共用同一個物件。 */
 const COIN_DEFS = {
-  NOX: { name: "NOXCAT", sub: "NOX · 最穩定，幾乎不動", price: 1, vol: 0.0015, hex: "#A3E635" },
-  CATN: { name: "貓薄荷幣", sub: "CATN · 中波動 · 後期強", price: 12.4, vol: 0.008, hex: "#4FD1C5" },
-  MEOW: { name: "喵喵迷因幣", sub: "MEOW · 高波動 · 可能歸零", price: 3.2, vol: 0.022, hex: "#F5A524" }
+  NOX: { name: "NOXCAT", sub: "NOX · 會漲會跌", price: 3.2, vol: 0.02, hex: "#91D500" }
 };
-/* 簡化版：全場只有一種幣，波動大到看得出漲跌，但不會有「押錯幣種」這件事。 */
-const SIMPLE_COIN_DEFS = {
-  NOX: { name: "NOXCAT", sub: "NOX · 會漲會跌", price: 3.2, vol: 0.02, hex: "#A3E635" }
-};
-
-export const MODES = ["full", "simple"];
-export const isSimple = (mode) => mode === "simple";
-export function coinDefsFor(mode) { return isSimple(mode) ? SIMPLE_COIN_DEFS : COIN_DEFS; }
-export function coinKeysFor(mode) { return Object.keys(coinDefsFor(mode)); }
 
 export const CK = Object.keys(COIN_DEFS);
-export function createCoins(mode) {
-  const defs = coinDefsFor(mode), coins = {};
-  Object.keys(defs).forEach(k => {
-    const price = defs[k].price;
-    coins[k] = { ...defs[k], ref: price, hist: Array.from({ length: 40 }, () => price) };
+export function createCoins() {
+  const coins = {};
+  Object.keys(COIN_DEFS).forEach(k => {
+    const price = COIN_DEFS[k].price;
+    coins[k] = { ...COIN_DEFS[k], ref: price, hist: Array.from({ length: 40 }, () => price) };
   });
   return coins;
 }
@@ -30,20 +20,9 @@ export function createCoins(mode) {
 /* 每個兵種 = 固定的「幣量」，所以幣便宜時同一隻兵就便宜、幣貴時就買不起 */
 /* 每張卡一次出三隻，所以單隻的幣量與數值都是原本的約 1/2.6 */
 export const PACK = 3;
+/* 全部綁 NOX(全場只有一種幣),qty 由便宜到貴排成一條升級曲線。
+   戰鬥兵掛 late:true,前 60 秒鎖住,逼玩家先學會挖礦攢錢再開打。 */
 export const UNITS = {
-  miner: { g: "礦", n: "礦工", coin: "CATN", qty: 3.7, hp: 38, atk: 3, rng: 26, spd: 26, cd: 0.6, rate: 0.45, role: "mine" },
-  guard: { g: "守", n: "守衛", coin: "CATN", qty: 8.1, hp: 150, atk: 7, rng: 32, spd: 20, cd: 1.1, role: "hold" },
-  soldier: { g: "兵", n: "士兵", coin: "MEOW", qty: 23, hp: 80, atk: 10, rng: 34, spd: 36, cd: 0.7, role: "hunt" },
-  assassin: { g: "刺", n: "刺客", coin: "MEOW", qty: 36, hp: 48, atk: 20, rng: 26, spd: 62, cd: 1.5, role: "hunt" },
-  pro: { g: "超", n: "超級礦工", coin: "NOX", qty: 136, hp: 65, atk: 4, rng: 28, spd: 22, cd: 1.4, rate: 1.2, role: "mine" },
-  para: { g: "傘", n: "傘兵", coin: "NOX", qty: 150, hp: 90, atk: 12, rng: 34, spd: 40, cd: 3.0, role: "drop" },
-  titan: { g: "獸", n: "巨獸", coin: "NOX", qty: 0, hp: 600, atk: 46, rng: 40, spd: 24, cd: 0, role: "hunt" }
-};
-
-/* 簡化版的兵種：數值與完整版相同，差別只有兩點——
-   1. 全部綁 NOX（只有一種幣），qty 重新配過，維持「由便宜到貴」的同一條升級曲線
-   2. 戰鬥兵掛 late:true，前 60 秒鎖住，逼玩家先學會挖礦攢錢再開打 */
-export const SIMPLE_UNITS = {
   miner: { g: "礦", n: "礦工", coin: "NOX", qty: 14.4, hp: 38, atk: 3, rng: 26, spd: 26, cd: 0.6, rate: 0.45, role: "mine" },
   soldier: { g: "兵", n: "士兵", coin: "NOX", qty: 22.2, hp: 80, atk: 10, rng: 34, spd: 36, cd: 0.7, role: "hunt", late: true },
   guard: { g: "守", n: "守衛", coin: "NOX", qty: 31.3, hp: 150, atk: 7, rng: 32, spd: 20, cd: 1.1, role: "hold" },
@@ -52,53 +31,84 @@ export const SIMPLE_UNITS = {
   para: { g: "傘", n: "傘兵", coin: "NOX", qty: 46, hp: 90, atk: 12, rng: 34, spd: 40, cd: 3.0, role: "drop" },
   titan: { g: "獸", n: "巨獸", coin: "NOX", qty: 0, hp: 600, atk: 46, rng: 40, spd: 24, cd: 0, role: "hunt", late: true }
 };
-export function unitsFor(mode) { return isSimple(mode) ? SIMPLE_UNITS : UNITS; }
 
 /* 一局 180 秒，S.t 是倒數，所以 t > 120 就是「開場那 60 秒」。 */
 export const LATE_T = 120;
-export function isLocked(mode, k, t) {
-  return isSimple(mode) && !!unitsFor(mode)[k]?.late && t > LATE_T;
+export function isLocked(k, t) {
+  return !!UNITS[k]?.late && t > LATE_T;
 }
 export function lockLeft(t) { return Math.max(0, Math.ceil(t - LATE_T)); }
 
 export const PCOL = ["w", "c", "o", "p"];
-export const ROSTER = ["miner", "soldier", "guard", "assassin", "pro", "titan"]; // 由便宜到貴排，越右邊越強
+/* 召喚列只放五張卡，由便宜到貴排。巨獸不在這排——它現在是梭哈青年的大招，
+   其他身份這局根本召不出巨獸，所以每個人的第六個按鈕都是自己的那一招。 */
+export const ROSTER = ["miner", "soldier", "guard", "assassin", "pro"];
+export const ORDER_ALL = [...ROSTER, "titan"];
 export const SPR_OF = { miner: "miner", guard: "guard", soldier: "soldier", assassin: "assassin", pro: "pro", titan: "titan" }; // 第六格＝來個大的
-export const COIN_UNITS = { NOX: "超級礦工・巨獸", MEOW: "士兵・刺客", CATN: "礦工・守衛" };
-const SIMPLE_COIN_UNITS = { NOX: "所有貓咪" };
-export function coinUnitsFor(mode) { return isSimple(mode) ? SIMPLE_COIN_UNITS : COIN_UNITS; }
+export const COIN_UNITS = { NOX: "所有貓咪" };
 export const ALLIN_MIN = 300;
+
+/* ============================ 大招 ============================ */
+/* 一個身份一招，冷卻 60 秒（一場三分鐘 ≈ 放得了三次）。招式本身就是那個身份
+   在現實裡對應的投資行為，賽後的 lessons 會把它翻成名詞講給玩家聽。
+   min = 發動所需的最低 Cash（不足就按不下去，梭哈青年是把 Cash 全押出去）。 */
+export const ULT_CD = 60;
+export const ULTS = {
+  office: {
+    n: "定期定額", g: "DCA", spr: "pro", min: 120,
+    d: "24 秒內每 3 秒自動買一隻礦工，不管幣價漲跌",
+    term: "定期定額 · DCA"
+  },
+  saver: {
+    n: "鎖倉", g: "STAKE", spr: "guard", min: 0,
+    d: "12 秒內你的貓不會受傷，期間結算保證不虧本",
+    term: "質押鎖倉 · Staking"
+  },
+  degen: {
+    n: "巨獸 ALL-IN", g: "ALLIN", spr: "titan", min: ALLIN_MIN,
+    d: "手上的 Cash 全押，召喚一隻巨獸",
+    term: "部位大小 · Position Sizing"
+  },
+  insider: {
+    n: "內線消息", g: "ALPHA", spr: "assassin", min: 0,
+    d: "立刻知道下一則新聞，而且它 8 秒後才發動",
+    term: "資訊優勢 · Information Edge"
+  }
+};
+export const DCA_T = 24, DCA_EVERY = 3;      // 定期定額：總長 24 秒，每 3 秒買一次
+export const STAKE_T = 12;                   // 鎖倉：12 秒無敵＋保本
+export const ALPHA_T = 8;                    // 內線消息：新聞延後 8 秒才發動
 
 /* 身份＝現實中不同的投資人處境：錢從哪來、有多少本金、承受得住多大波動 */
 export const CLASSES = {
   office: {
     n: "小資上班族", g: "SALARY",
-    d: "本金少，但每個月薪水會進來。適合細水長流。",
-    tags: ["開局 $600", "收入 ×1.5", "波動影響小"],
+    d: "本金少，但薪水一直進來。",
+    tags: ["$600", "收入 ×1.5"],
     cash: 600, incMul: 1.5, costMul: 1.0, fee: 0.005, cdMul: 0.8, mine: 1.1,
     lo: 0.8, hi: 1.25, lead: 6
   },
   saver: {
     n: "定存族", g: "SAVER",
-    d: "本金厚但求穩，漲跌對你的影響最小，抱越久越賺。",
-    tags: ["開局 $1,500", "收入 ×0.6", "抱久加成"],
+    d: "本金厚、求穩，抱越久越賺。",
+    tags: ["$1,500", "抗跌最強"],
     cash: 1500, incMul: 0.6, costMul: 1.0, fee: 0.003, cdMul: 1.0, mine: 1.0,
     lo: 0.85, hi: 1.15, lead: 6, loyal: true
   },
   degen: {
     n: "梭哈青年", g: "DEGEN",
-    d: "賺賠都放大，一則新聞就能翻身，也能翻船。",
-    tags: ["波動影響 ×2", "召喚 −10%", "手續費 1.5%"],
+    d: "賺賠都放大，一則新聞定生死。",
+    tags: ["$900", "波動 ×2"],
     cash: 900, incMul: 1.0, costMul: 0.9, fee: 0.015, cdMul: 0.9, mine: 0.85,
     lo: 0.5, hi: 1.9, lead: 6
   },
   insider: {
     n: "消息靈通", g: "ALPHA",
-    d: "你比別人早知道消息，也看得到幅度——但情報要花錢。",
-    tags: ["預告 12 秒", "看得到幅度", "手續費 2%"],
+    d: "比別人早知道消息，但情報要錢。",
+    tags: ["$800", "預告 12 秒"],
     cash: 800, incMul: 1.0, costMul: 1.0, fee: 0.02, cdMul: 1.0, mine: 1.0,
     lo: 0.75, hi: 1.4, lead: 12, insight: true
   }
 };
-export const PLAYER_COLORS = ["#A3E635", "#4FD1C5", "#F5A524", "#E2557A"];
+export const PLAYER_COLORS = ["#91D500", "#4FD1C5", "#F5A524", "#E2557A"];
 export const AI_NAMES = ["巨鯨_0x7f", "散戶聯盟", "做市商 MM"];

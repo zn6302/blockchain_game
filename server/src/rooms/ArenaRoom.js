@@ -14,9 +14,6 @@ export class ArenaRoom extends Room {
   onCreate(options) {
     this.setState(new GameState());
     this.state.code = String((options && options.code) || "");
-    /* 模式在建房時就定死,整局不會變——同一間房裡不可能有人玩完整版有人玩簡化版。 */
-    this.mode = (options && options.mode) === "simple" ? "simple" : "full";
-    this.state.mode = this.mode;
     for (let i = 0; i < 4; i++) {
       this.state.players.push(new PlayerState({ i, isBot: true, name: `電腦 ${i + 1}` }));
     }
@@ -27,7 +24,6 @@ export class ArenaRoom extends Room {
     this.matchStarted = false;
 
     this.game = createGameInstance({
-      mode: this.mode,
       emit: (type, payload, targetPi) => {
         if (targetPi != null) {
           const c = this.clientsBySeat[targetPi];
@@ -54,9 +50,9 @@ export class ArenaRoom extends Room {
       this.startMatch();
     });
     this.onMessage("summon", (client, msg) =>
-      this.forSeat(client, pi => this.game.summon(pi, msg && msg.k, msg && msg.zone)));
-    this.onMessage("allIn", (client, msg) =>
-      this.forSeat(client, pi => this.game.allIn(pi, msg && msg.k, msg && msg.zone)));
+      this.forSeat(client, pi => this.game.summon(pi, msg && msg.k)));
+    this.onMessage("useUlt", (client) =>
+      this.forSeat(client, pi => this.game.useUlt(pi)));
     this.onMessage("settleOne", (client, msg) =>
       this.forSeat(client, pi => this.game.settleOneById(pi, msg && msg.unitId)));
     this.onMessage("settleGroup", (client, msg) =>
