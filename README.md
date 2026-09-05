@@ -162,7 +162,7 @@ npm run preview:prod      # build 前端，然後用 production 模式起伺服�
 ### 部署到 Fly.io
 
 ```bash
-flyctl launch --no-deploy    # 建 app（fly.toml 的 app 名字要全球唯一，會請你改）
+    # 建 app（fly.toml 的 app 名字要全球唯一，會請你改）
 flyctl deploy                # 第一次手動部署，確認真的起得來
 flyctl scale count 1         # 確認只有一台
 ```
