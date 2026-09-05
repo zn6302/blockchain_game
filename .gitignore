@@ -1,3 +1,7 @@
 node_modules/
 dist/
 .DS_Store
+
+# 美術參考稿(reference/區塊鏈大戰爭 N/)。是「照著做」的來源,不是專案要編譯的
+# 東西,而且一份就三 MB 多的 png,留在版控裡只會讓 clone 變慢。
+reference/
