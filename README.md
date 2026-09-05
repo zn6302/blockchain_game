@@ -18,7 +18,7 @@ We have made NOXFLOW. A resource management autobattler where you fight four oth
 **The game is live.** NOXFLOW is fully deployed at
 [noxcat-arena.fly.dev](https://noxcat-arena.fly.dev/) with real-time online
 matchmaking. Press one button and you are in a match against real people within
-seconds, on desktop or phone.
+seconds, on desktop or phone with **responsive mobile support**.
 
 - **Real-time multiplayer, already running:** Quick match drops you in with
   whoever is waiting, or share a four-digit code for a private lobby. Rooms are
