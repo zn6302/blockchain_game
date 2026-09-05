@@ -29,3 +29,7 @@ export function useMediaQuery(query) {
 /* 右側「我的部隊」面板在這個寬度以下會被 CSS 收起來（index.css 的
    `@media (max-width:1120px){ .troops{display:none} }`）。 */
 export const TROOP_PANEL_HIDDEN = "(max-width:1120px)";
+
+/* 手機直式（含 iPad 直式）：操作列疊成直的那一版。橫式手機有自己一整套
+   壓扁的規則，min-height 把它排除掉，免得兩套版型互相打架。 */
+export const MOBILE_DOCK = "(max-width:900px) and (min-height:561px)";

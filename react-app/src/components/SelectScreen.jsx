@@ -1,6 +1,6 @@
 import { CLASSES } from "../game/constants.js";
 import { ULTS } from "@noxcat/shared/constants.js";
-import { CLS_ICON, IP_CAT } from "../game/classIcons.js";
+import { CLS_ICON, IP_CAT, NOX_WORD } from "../game/classIcons.js";
 import RoomCode from "./RoomCode.jsx";
 
 export default function SelectScreen({ onPick }) {
@@ -8,10 +8,10 @@ export default function SelectScreen({ onPick }) {
     <div className="ov" id="selectOv">
       <div className="panel">
         <div className="iphero">
-          <img className="ipcat" src={IP_CAT} alt="NOXCAT" />
-          <div className="ipword">NOXCAT<span>ARENA</span></div>
+          <img className="ipcat" src={IP_CAT} alt="NoxFlow" />
+          <img className="ipword" src={NOX_WORD} alt="NoxFlow" />
         </div>
-        <div className="eyebrow">區塊鏈大戰爭 · 簡化版 · 3 分鐘 · 4 人</div>
+        <div className="eyebrow">簡化版 · 3 分鐘 · 4 人</div>
         <RoomCode />
         <h3>買貓咪＝買幣，結算＝賣幣</h3>
         <p className="lead">三分鐘，最有錢的人贏。剩下的進去再說。</p>

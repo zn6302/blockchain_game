@@ -1,4 +1,6 @@
 import { S, money, posTotal, netWorth } from "../game/state.js";
+import { SFX } from "../game/audio.js";
+import { NOX_MARK, NOX_WORD } from "../game/classIcons.js";
 import { useEngineVersion } from "../hooks/useEngineStore.js";
 
 export default function Hud({ engine }) {
@@ -13,8 +15,8 @@ export default function Hud({ engine }) {
   return (
     <header className="hud">
       <div className="brand">
-        <div className="mark">N</div>
-        <div><h1>區塊鏈大戰爭</h1><span>NOXCAT ARENA · 4P</span></div>
+        <img className="mark" src={NOX_MARK} alt="" />
+        <div><h1><img src={NOX_WORD} alt="NoxFlow" /></h1><span>4P · 3 分鐘</span></div>
       </div>
       <div className="players" id="players">
         {players.map(p => {
@@ -47,6 +49,14 @@ export default function Hud({ engine }) {
       <div className={`clock ${t <= 30 ? "warn" : ""}`} id="clock">
         <div className="t num" id="timer">{timeTxt}</div>
         <div className="l">TIME LEFT</div>
+      </div>
+      {/* 手機直式限定：原本浮在地圖右上角的兩顆鍵挪到這裡,地圖上緣就整條讓給事件卡。
+          桌機的 .zoomctl 還有 ＋／− 縮放,那邊維持原樣（CSS 控制誰出現）。 */}
+      <div className="mapctl">
+        <button title="回到我的基地" onClick={() => engine.homeCamera()}>⌂</button>
+        <button title="音效" className={SFX.on ? "on" : ""} onClick={() => engine.toggleSfx()}>
+          {SFX.on ? "🔊" : "🔇"}
+        </button>
       </div>
     </header>
   );

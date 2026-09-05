@@ -53,11 +53,17 @@ button:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
 .hud{display:flex;align-items:center;gap:14px;overflow:hidden;
   background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px 14px}
 .brand{flex:none;display:flex;align-items:center;gap:10px}
-.mark{width:28px;height:28px;border-radius:9px;background:var(--lime);display:grid;place-items:center;
-  color:#0B1004;font-weight:900;font-size:17px;font-family:var(--mono)}
-.brand h1{font-size:14px;margin:0;letter-spacing:.5px;font-weight:900}
+.mark{width:28px;height:28px;border-radius:9px;display:block;flex:none}
+.brand h1{margin:0}
+/* 字樣的點陣網格是 27×5 個模組,高度取 5 的倍數才會整數對齊、邊緣不糊。 */
+.brand h1 img{display:block;height:15px;width:auto;image-rendering:pixelated}
 .brand span{display:block;font-size:10px;color:var(--faint);letter-spacing:2.4px;font-family:var(--mono)}
 .clock{flex:none;text-align:right}
+/* 地圖控制鍵：桌機是地圖上的 .zoomctl，手機直式挪到倒數旁邊（見 Hud.jsx） */
+.mapctl{display:none;flex:none;align-items:center;gap:5px}
+.mapctl button{width:32px;height:32px;border-radius:9px;border:1px solid var(--line);
+  background:var(--panel-2);color:var(--txt);font-size:13px;line-height:1}
+.mapctl button.on{border-color:var(--lime);color:var(--lime)}
 .clock .t{font-family:var(--mono);font-size:26px;font-weight:700;line-height:1;letter-spacing:1px}
 .clock .l{font-size:10px;color:var(--faint);letter-spacing:2.6px;font-family:var(--mono)}
 .clock.warn .t{color:var(--down)}
@@ -83,6 +89,8 @@ button:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
 /* ---------- stage (map-first) ---------- */
 .stage{position:relative;flex:1;min-height:0;border:1px solid var(--line);border-radius:18px;overflow:hidden;
   background:radial-gradient(120% 92% at 50% 42%,#101711 0%,#090C08 72%)}
+/* 地圖包一層：手機直式時它變成 flex 的伸縮欄，事件卡才推得動地圖上緣 */
+.mapwrap{position:absolute;inset:0}
 svg.map{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
 svg.map.drag{cursor:grabbing}
 .zoomctl{position:absolute;right:12px;bottom:12px;display:flex;flex-direction:column;gap:6px;z-index:3}
@@ -138,6 +146,8 @@ svg.map.drag{cursor:grabbing}
   border:1px solid var(--line);border-radius:20px;padding:6px 12px}
 .legend i{display:inline-block;width:7px;height:7px;border-radius:2px;margin-right:5px}
 
+/* 事件卡的殼：桌機 display:contents，事件卡照舊浮在地圖上 */
+.ctxstrip{display:contents}
 .evtbar{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:6;display:none;
   min-width:min(420px,84%);max-width:min(560px,90%);background:rgba(9,13,9,.95);
   border:1px solid var(--line);border-radius:12px;padding:8px 13px 9px;box-shadow:0 8px 26px rgba(0,0,0,.5)}
@@ -252,6 +262,8 @@ svg.map.drag{cursor:grabbing}
 .a .d{font-size:9px;color:var(--faint);line-height:1.3}
 .a .p{font-family:var(--mono);font-size:9.5px;color:var(--lime-dim);margin-top:1px}
 
+/* 現金＋行情＋全部結算的殼：桌機 display:contents，操作列排法不變 */
+.statusrow{display:contents}
 .cashcol{flex:none;min-width:var(--cash-w)}
 .cash{font-family:var(--mono);font-size:23px;font-weight:700;color:var(--lime);line-height:1;margin-top:1px}
 .ticker{display:flex;flex-direction:column;gap:2px;margin-top:7px}
@@ -355,9 +367,8 @@ svg.map.drag{cursor:grabbing}
 .ultrow i{font-style:normal;font-size:10px;color:var(--muted);line-height:1.4}
 .iphero{display:flex;align-items:center;gap:clamp(10px,2.4vw,18px);margin-bottom:clamp(10px,2vw,16px)}
 .iphero .ipcat{height:clamp(84px,19vw,172px);width:auto;image-rendering:pixelated;flex:none}
-.ipword{font-size:clamp(14px,4.4vw,23px);font-weight:900;color:#F6F6F6;line-height:1.35;letter-spacing:.5px}
-.ipword span{display:block;font-size:clamp(7px,1.8vw,10px);font-weight:700;color:#B2B2B2;
-  letter-spacing:3px;margin-top:4px}
+/* 字樣是點陣字的圖檔(469×87),用高度控大小、寬度自己跟；縮太小筆畫會糊,所以下限抓 26px。 */
+.ipword{height:clamp(26px,6.2vw,44px);width:auto;flex:none}
 .ipres{display:flex;align-items:flex-start;gap:clamp(10px,2.2vw,16px);margin-bottom:10px}
 .ipres img{height:clamp(66px,13vw,112px);width:auto;image-rendering:pixelated;flex:none}
 .reshead{min-width:0}
@@ -518,6 +529,72 @@ svg.map.drag{cursor:grabbing}
   .rrow{font-size:11.5px;padding:8px 10px}
 }
 
+/* ---------- 手機直式：把「看的／按的／收的」壓成三段 ----------
+   上面 max-width:900px 那塊是手機共用（橫式也吃得到），版型的改動全放這裡，
+   min-height 把橫式排除掉——橫式有自己一整套壓扁的規則，兩套會互相打架。
+   對應的 JS 斷點是 useMediaQuery.js 的 MOBILE_DOCK，改這裡記得改那邊。 */
+@media (max-width:900px) and (min-height:561px){
+  /* ① HUD 壓成一列：四張記分卡 + 倒數 + 地圖控制鍵並排，省下時鐘獨佔的那一列 */
+  .hud{flex-wrap:nowrap;gap:8px}
+  .players{flex:1 1 auto;gap:4px}
+  .clock{text-align:right;margin-inline:0}
+  .clock .l{display:none}                            /* 一列塞得下才是重點，倒數本來就看得懂 */
+  .mapctl{display:flex}
+  .mapctl button{width:30px;height:30px}
+  /* 記分卡橫排放不下「P1 $1,540」，改成上下兩行：一列還是省下時鐘獨佔的那一列 */
+  .pl{padding:4px 6px;border-color:transparent}      /* 少一層框，只有自己那張留邊 */
+  .pl.me{border-color:rgba(145,213,0,.45)}
+  .pl .row{flex-direction:column;align-items:stretch;gap:0}
+  .pl .nm{font-size:8.5px;max-width:none}
+  .pl .val{font-size:11px}
+  .pl .bar{height:3px;margin-top:4px}
+  .dot{width:6px;height:6px}
+
+  /* ② 事件卡不再蓋住地圖左上角，改成貼齊地圖上緣、吃滿寬的一條 */
+  .stage{display:flex;flex-direction:column}
+  .mapwrap{position:relative;inset:auto;flex:1 1 auto;min-height:0}
+  /* 底線掛在事件卡自己身上：沒有事件時整條收成 0，地圖頂端不會留一條線 */
+  .ctxstrip{display:block;order:-1;flex:none;position:relative;z-index:6}
+  .evtbar{position:static;transform:none;min-width:0;max-width:none;
+    border:0;border-bottom:1px solid var(--line);border-radius:0;box-shadow:none;
+    background:rgba(9,13,9,.96);padding:7px 11px 8px}
+  .evtbar .eco{display:none}                         /* 幣價下面行情列已經有一份 */
+  .zoomctl{display:none}                             /* ⌂／音效搬去倒數旁邊了 */
+
+  /* ③ 操作列拿掉自己的外框，改成地圖底部的漸層——盒中盒少一層 */
+  .dock{left:0;right:0;bottom:0;padding:20px 8px 8px;border:0;border-radius:0;
+    box-shadow:none;backdrop-filter:none;
+    background:linear-gradient(to top,rgba(6,9,6,.97) 56%,rgba(6,9,6,.88) 78%,rgba(6,9,6,0))}
+
+  /* ④ 看的＋收的：現金、行情、全部結算同一列 */
+  .statusrow{display:flex;align-items:center;gap:8px;min-width:0}
+  .cashcol{flex:1 1 auto;min-width:0}
+  .ticker{gap:8px;overflow:hidden}
+  .prow .pv{font-size:15px}.prow .pc{font-size:10px}
+  .spark{width:56px;height:18px}
+  .asell{flex:none;width:auto;min-width:0;flex-direction:row;align-items:baseline;gap:6px;
+    padding:6px 10px;border-color:rgba(145,213,0,.42);background:rgba(145,213,0,.07)}
+  .asell .t{font-size:10px}
+  .asell .p{font-family:var(--mono);font-size:10.5px;color:var(--lime);margin:0}
+  .asell.off{opacity:.32}
+  /* 單隻結算收進部隊 chip，不再自己佔一列 */
+  .tchip{padding-right:3px}
+  .tchip .tset{padding:3px 5px;font-size:9px;border-radius:5px}
+
+  /* ⑤ 按的：5 張召喚卡 + 大招第 6 張，填滿整列不用橫捲 */
+  .units{gap:4px}
+  .u{width:auto;flex:1 1 0;min-width:0}
+  .ultcard{width:auto;flex:1 1 0;min-width:0;align-items:center;text-align:center;
+    gap:2px;padding:5px 3px 4px;border-radius:12px}
+  .ultcard .ud,.ultcard .ug{display:none}
+  .ultcard .uhead{flex-direction:column;align-items:center;gap:1px;width:100%;min-width:0}
+  .ultcard .uhead img{height:24px;width:24px;margin:2px 0 1px}
+  .ultcard .uhead b{font-size:9px;font-weight:700;white-space:normal;line-height:1.15}
+  .ultcard .us{font-size:8px;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ultcard .k{position:absolute;top:3px;left:3px;z-index:1;line-height:1;
+    font-family:var(--mono);font-size:7px;color:var(--faint)}
+}
+
 /* ---------- 手機橫式：畫面很矮，介面要壓成一條 ---------- */
 @media (orientation:landscape) and (max-height:560px){
   .wrap{gap:5px;padding:max(5px,var(--sa-t)) max(6px,var(--sa-r)) max(6px,var(--sa-b)) max(6px,var(--sa-l))}
@@ -580,7 +657,7 @@ svg.map.drag{cursor:grabbing}
   .ultrow{padding:4px 6px;margin-top:6px}
   .ultrow b{font-size:9.5px}.ultrow i{font-size:8.5px}
   .iphero .ipcat{height:84px}
-  .ipword{font-size:15px}
+  .ipword{height:26px}
   .foot{justify-content:flex-end}
   .foot .btn{flex:none}
   /* 橫式：大招只留名字＋狀態，說明收起來 */
@@ -613,7 +690,7 @@ svg.map.drag{cursor:grabbing}
   .ovl h2{font-size:11px}.troops h2 b{font-size:13px}
   .pl .nm{font-size:13px}.pl .val{font-size:16px}.pl .sub{font-size:10.5px}
   .clock .t{font-size:40px}.clock .l{font-size:11px}
-  .brand h1{font-size:18px}
+  .brand h1 img{height:20px}
   .toast{font-size:13px;padding:10px 18px;border-radius:14px}
 }
 @media (min-width:2300px){

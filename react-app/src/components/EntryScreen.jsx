@@ -22,7 +22,7 @@ export default function EntryScreen({ engine }) {
   return (
     <div className="ov" id="entryOv">
       <div className="panel" style={{ maxWidth: 520 }}>
-        <div className="eyebrow">NOXCAT ARENA</div>
+        <div className="eyebrow">NOXFLOW</div>
         <h3>開一間房，或用房號加入朋友</h3>
         <p className="lead">
           一場 3 分鐘、最多 4 人。人不夠的座位由電腦接手，
