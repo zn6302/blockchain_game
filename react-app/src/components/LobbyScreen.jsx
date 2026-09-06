@@ -21,7 +21,7 @@ export default function LobbyScreen({ engine }) {
         <RoomCode />
         {/* 「誰能按開始」不寫進這句:房主看得到開始鍵、非房主看得到下面的提示,
             按鈕本身就說明了誰能動手。這句只留房間規則。 */}
-        <p className="lead">空位由電腦補，四個真人到齊會自動開始。</p>
+        <p className="lead">空位由電腦補，四個真人都選好身份後會自動開始。</p>
         <div className="classes" id="lobbySeats">
           {S.players.map((p, i) => (
             <div className="cls" key={i} style={{ cursor: "default" }}>

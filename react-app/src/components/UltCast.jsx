@@ -1,4 +1,4 @@
-import { ULTS } from "@noxcat/shared/constants.js";
+import { ULTS, PLAYER_COLORS } from "@noxcat/shared/constants.js";
 import { CLS_ICON } from "../game/classIcons.js";
 import { S } from "../game/state.js";
 import { useEngineVersion } from "../hooks/useEngineStore.js";
@@ -14,7 +14,7 @@ export default function UltCast({ engine }) {
   const ult = ULTS[c.cls];
   if (!ult) return null;
   return (
-    <div className="ultcast" key={c.seq} style={{ "--ucol": ult.hex }}>
+    <div className="ultcast" key={c.seq} style={{ "--ucol": PLAYER_COLORS[S.myIndex] || ult.hex }}>
       <img src={CLS_ICON[c.cls]} alt="" />
       {/* 只放代號＋名字:招式在做什麼,伺服器那則 toast 已經寫得很清楚了,
           兩邊都寫一次會變成同一句話蓋在畫面上兩份。 */}
