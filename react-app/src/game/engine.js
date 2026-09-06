@@ -169,6 +169,8 @@ export function createEngine() {
       room.onStateChange((state) => mirrorState(state));
       room.onMessage("fx", (batch) => {
         batch.forEach(f => {
+          /* 大招的形狀由招式代號決定，顏色則固定跟施放者座位走。 */
+          if (f.k === "ult") f.c = PLAYER_COLORS[f.p] || f.c;
           const life = f.k === "ult" ? (ULT_LIFE[f.u] || 1.4) : (FX_LIFE[f.k] || 0.3);
           S.fx.push({ ...f, t: life, life });
           if (f.k === "ult" && f.u !== "dca") onUltCast(f);
@@ -228,6 +230,12 @@ export function createEngine() {
      四個人的招輪流蓋在畫面中間會擋住正在打的那場仗。 */
   function onUltCast(f) {
     if (f.u === "degen" && mapView) mapView.shake(f.p === S.myIndex ? 7 : 4.5, 620);
+    if (f.u === "office") {
+      /* 視覺倒數跟技能同為 24 秒，但不回寫伺服器，也不影響自動購買規則。 */
+      const now = performance.now();
+      S.dcaVisual[f.p] = { x: f.x, y: f.y, startedAt: now, until: now + 24000 };
+      if (mapView) mapView.shake(f.p === S.myIndex ? 4.5 : 3, 360);
+    }
     if (f.p !== S.myIndex || !ULTS[f.u]) return;
     S.ultCast = { cls: f.u, until: performance.now() + CAST_MS, seq: (S.ultCast?.seq || 0) + 1 };
     notify();

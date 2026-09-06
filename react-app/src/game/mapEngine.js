@@ -72,18 +72,13 @@ function coinGlyph(x, y, col, op, r) {
 }
 
 const ULT_FX = {
-  /* 定期定額：錢按固定的拍子從天上掉進基地。七枚硬幣的間隔是寫死的等距,不隨機——
-     這一招講的就是「節奏」,亂掉就沒有意思了。 */
-  office(f, pr, k) {
-    let s = isoRing(f.x, f.y + 6, 20 + pr * 42, f.c, k * 0.75, 3)
-      + isoRing(f.x, f.y + 6, 8 + pr * 24, f.c, k * 0.45, 2);
-    for (let i = 0; i < 7; i++) {
-      const lp = clamp((pr - i * 0.07) / 0.5, 0, 1);
-      if (lp <= 0) continue;
-      const a = i * 1.795 + 0.5;
-      const drop = (1 - lp * lp) * 78;                    // 越掉越快
-      s += coinGlyph(f.x + Math.cos(a) * 34, f.y + 4 + Math.sin(a) * 34 * KY - drop,
-        f.c, Math.min(1, lp * 4) * Math.min(1, k * 3), 5.2);
+  /* 時鐘本體只由 drawDcaVisual 畫；這裡只保留它落地時的衝擊波，避免生成第二顆鐘。 */
+  office(f, pr, _k) {
+    let s = "";
+    if (pr > .28) {
+      const ip = clamp((pr - .28) / .5, 0, 1);
+      s += isoRing(f.x, f.y + 5, 12 + ip * 76, f.c, (1 - ip) * .9, 4)
+        + isoRing(f.x, f.y + 5, 7 + ip * 48, "#F2F7EE", (1 - ip) * .55, 2);
     }
     return s;
   },
@@ -157,6 +152,31 @@ const ULT_FX = {
       + coinGlyph(f.x, f.y - 4 - pr * 18, f.c, Math.min(1, k * 1.6), 4.4);
   },
 };
+
+/* 發動落地動畫結束後，時鐘仍懸在基地上方倒數。這只讀本地視覺狀態。 */
+function drawDcaVisual(now) {
+  let s = "";
+  Object.entries(S.dcaVisual).forEach(([pi, v]) => {
+    const left = (v.until - now) / 1000;
+    if (left <= 0) { delete S.dcaVisual[pi]; return; }
+    const elapsed = now - v.startedAt, land = clamp(elapsed / 510, 0, 1);
+    const ease = 1 - Math.pow(1 - land, 3), restingY = v.y - 42;
+    const cy = restingY - (1 - ease) * 155 + (land >= 1 ? Math.sin(now / 420) * 1.5 : 0);
+    const squash = land >= 1 && elapsed < 720 ? 1 + Math.sin((elapsed - 510) / 210 * Math.PI) * .1 : 1;
+    const pulse = (1 + Math.sin(now / 180) * .025) * squash;
+    const minuteA = (24 - left) / 24 * Math.PI * 2 - Math.PI / 2;
+    const hourA = (24 - left) / 24 * Math.PI / 3 - Math.PI / 2;
+    const col = PLAYER_COLORS[+pi] || "#91D500";
+    s += `<g transform="translate(${v.x.toFixed(1)} ${cy.toFixed(1)}) scale(${(2 - pulse).toFixed(3)} ${pulse.toFixed(3)})" pointer-events="none">
+      <ellipse cy="23" rx="17" ry="4.5" fill="${col}" opacity=".08"/>
+      <circle r="18" fill="${col}" opacity=".82"/>
+      <circle r="15.3" fill="#132014" opacity=".96"/>
+      <line x2="${(Math.cos(hourA) * 8).toFixed(1)}" y2="${(Math.sin(hourA) * 8).toFixed(1)}" stroke="#F2F7EE" stroke-width="2.3" stroke-linecap="round"/>
+      <line x2="${(Math.cos(minuteA) * 12).toFixed(1)}" y2="${(Math.sin(minuteA) * 12).toFixed(1)}" stroke="${col}" stroke-width="1.7" stroke-linecap="round"/>
+      <circle r="1.8" fill="#F2F7EE"/></g>`;
+  });
+  return s;
+}
 
 const NS = "http://www.w3.org/2000/svg";
 
@@ -355,16 +375,19 @@ export function createMapView(svgEl) {
       ${mine ? `<g class="plg" style="display:none"><rect class="mbg" x="-19" y="${(-H - 15).toFixed(1)}" width="38" height="13" rx="6.5"/>
         <text class="plbig" y="${(-H - 5.5).toFixed(1)}"></text></g>
         <text class="plmark" y="${(-H - 5).toFixed(1)}"></text>` : ""}
-      <g class="shd" style="display:none">
-        <circle class="shb" cy="-2" fill="#4FD1C5" opacity=".12"/>
-        <circle class="shr" cy="-2" fill="none" stroke="#4FD1C5" stroke-width="1.6" stroke-dasharray="4 5"/>
+      <g class="dcaura" style="display:none" pointer-events="none"></g>
+      <g class="shd" style="display:none" pointer-events="none">
+        <path class="shb" fill="${c}" opacity=".3"/>
+        <path class="shr" fill="none" stroke="${c}" stroke-width="1.15" stroke-linejoin="round" opacity=".72"/>
+        <path class="shl" fill="none" stroke="#FFFFFF" stroke-width="1" opacity=".38"/>
       </g>`;
     const n = {
       g, ui, sc: g.querySelector(".sc"), fl: g.querySelector(".fl"), img: g.querySelector("image"), hf: g.querySelector(".hf"),
       cb: ui.querySelector(".cb"), se: ui.querySelector(".se"), mn: ui.querySelector(".mn"),
       hp: ui.querySelector(".hp"), mark: ui.querySelector(".plmark"),
       plg: ui.querySelector(".plg"), mbg: ui.querySelector(".mbg"), plb: ui.querySelector(".plbig"),
-      shd: ui.querySelector(".shd"), shb: ui.querySelector(".shb"), shr: ui.querySelector(".shr"),
+      dca: ui.querySelector(".dcaura"), shd: ui.querySelector(".shd"), shb: ui.querySelector(".shb"),
+      shr: ui.querySelector(".shr"), shl: ui.querySelector(".shl"),
       W, H, bw, band: -1, href: "", face: 0, seen: 0, k: 0
     };
     const rr = ui.querySelectorAll("rect"); n.hpbg = rr[0];
@@ -414,25 +437,54 @@ export function createMapView(svgEl) {
       // 受擊閃白
       if (hit > 0) { n.hf.style.display = ""; n.hf.setAttribute("opacity", (hit * 0.45).toFixed(2)); }
       else if (n.hf.style.display !== "none") n.hf.style.display = "none";
-      // 交戰 / 選取 / 挖礦
-      n.cb.style.display = u.combatT > 0 ? "" : "none";
+      // 交戰狀態由攻擊線、受擊閃光與傷害數字表達，不再顯示出戲的紅色圓圈。
+      n.cb.style.display = "none";
       n.se.style.display = (S.selU === u.id) ? "" : "none";
       if (u.mineFx > 0) {
         n.mn.style.display = ""; n.mn.setAttribute("r", (n.W * 0.5 + (0.55 - u.mineFx) * 16).toFixed(1));
         n.mn.setAttribute("opacity", (u.mineFx / 0.55 * 0.7).toFixed(2));
       }
       else if (n.mn.style.display !== "none") n.mn.style.display = "none";
-      /* 鎖倉那 12 秒,這位玩家的每一隻貓都不會受傷——所以每一隻身上都要有泡泡。
-         狀態直接讀 owner.lockT（伺服器同步過來的）,不必再多一條 per-unit 欄位;
-         最後 1.2 秒淡出,玩家才看得出保護快沒了。 */
+      /* 定期定額期間，礦工身邊持續有像增益藥水的螺旋資金粒子。 */
+      const dca = S.dcaVisual[u.p], dcaOn = u.k === "miner" && dca && dca.until > performance.now();
+      if (dcaOn) {
+        const phase = tsec * 2.1 + u.id * .73, rr = n.W * .48 * Math.max(1, n.k);
+        const ah = n.H * .68 * Math.max(1, n.k);
+        const pcol = PLAYER_COLORS[u.p] || "#91D500";
+        /* Soft Aura：光從腳底聚集，再以柔軟、尖端收束的能量絲帶往上竄。
+           同一批形狀疊一層模糊外光和一層較清楚的內芯，避免變成光圈或實心圓柱。 */
+        let wisps = "";
+        for (let i = 0; i < 9; i++) {
+          const q = i / 8, x0 = (q * 2 - 1) * rr * .67;
+          const ph = phase + i * 1.17, h = ah * (.48 + (i % 4) * .13 + Math.sin(ph) * .06);
+          const inward = -x0 * .4, bend = Math.sin(ph * .83) * rr * .14;
+          const tipX = x0 + inward + bend, w = rr * (.075 + (i % 3) * .018);
+          const d = `M${(x0 - w).toFixed(1)},2 C${(x0 - w * .7).toFixed(1)},${(-h * .3).toFixed(1)} ${(tipX - bend * .35 - w * .35).toFixed(1)},${(-h * .72).toFixed(1)} ${tipX.toFixed(1)},${(-h).toFixed(1)} C${(tipX + bend * .18 + w * .32).toFixed(1)},${(-h * .7).toFixed(1)} ${(x0 + w * .75).toFixed(1)},${(-h * .27).toFixed(1)} ${(x0 + w).toFixed(1)},2 Z`;
+          wisps += `<path d="${d}" fill="${i % 3 === 1 ? "#F2F7EE" : pcol}" opacity="${(.28 + (i % 3) * .045).toFixed(2)}"/>`;
+        }
+        const bubbleR = Math.max(n.W * .58, n.H * .52) * Math.max(1, n.k);
+        const bubbleY = -n.H * .39 * Math.max(1, n.k), breathe = 1 + Math.sin(phase * .72) * .025;
+        let aura = `<g transform="translate(0 ${bubbleY.toFixed(1)}) scale(${breathe.toFixed(3)})">
+            <circle r="${bubbleR.toFixed(1)}" fill="${pcol}" opacity=".14"/>
+            <circle r="${bubbleR.toFixed(1)}" fill="none" stroke="${pcol}" stroke-width="1.25" opacity=".58" style="filter:blur(.7px)"/>
+            <ellipse cx="${(-bubbleR * .3).toFixed(1)}" cy="${(-bubbleR * .34).toFixed(1)}"
+              rx="${(bubbleR * .24).toFixed(1)}" ry="${(bubbleR * .13).toFixed(1)}" fill="#F2FFD3" opacity=".24" transform="rotate(-32)"/>
+          </g>
+          <g style="filter:blur(5px)" opacity=".64">${wisps}</g>
+          <g style="filter:blur(.35px)" opacity=".98">${wisps}</g>`;
+        n.dca.innerHTML = aura; n.dca.style.display = "";
+      } else if (n.dca.style.display !== "none") n.dca.style.display = "none";
+      /* 鎖倉期間，每隻貓的正前方展開半透明盾牌；盾牌會跟著角色面向換邊。 */
       const lockT = (S.players[u.p] || {}).lockT || 0;
       if (lockT > 0) {
-        const r = n.W * 0.66 * Math.max(1, n.k) + Math.sin(tsec * 5 + u.id) * 1.4;
+        const sw = n.W * 1.12 * Math.max(1, n.k), sh = n.H * 1.02 * Math.max(1, n.k);
+        const pulse = 1 + Math.sin(tsec * 5 + u.id) * .025;
+        const d = `M0,${(-sh / 2).toFixed(1)} L${(sw / 2).toFixed(1)},${(-sh * .28).toFixed(1)} L${(sw * .4).toFixed(1)},${(sh * .26).toFixed(1)} L0,${(sh / 2).toFixed(1)} L${(-sw * .4).toFixed(1)},${(sh * .26).toFixed(1)} L${(-sw / 2).toFixed(1)},${(-sh * .28).toFixed(1)} Z`;
         n.shd.style.display = "";
         n.shd.setAttribute("opacity", Math.min(1, lockT / 1.2).toFixed(2));
-        n.shb.setAttribute("r", r.toFixed(1));
-        n.shr.setAttribute("r", (r + 2).toFixed(1));
-        n.shr.setAttribute("stroke-dashoffset", (-tsec * 14).toFixed(1));
+        n.shd.setAttribute("transform", `translate(0,${(-n.H * .4).toFixed(1)}) scale(${pulse.toFixed(3)})`);
+        n.shb.setAttribute("d", d); n.shr.setAttribute("d", d);
+        n.shl.setAttribute("d", `M${(-sw * .27).toFixed(1)},${(-sh * .21).toFixed(1)} L0,${(-sh * .34).toFixed(1)} L${(sw * .27).toFixed(1)},${(-sh * .21).toFixed(1)}`);
       } else if (n.shd.style.display !== "none") n.shd.style.display = "none";
       n.hp.setAttribute("width", (n.bw * Math.max(0, u.hp / u.hpMax)).toFixed(1));
       if (n.mark) {
@@ -470,8 +522,7 @@ export function createMapView(svgEl) {
 
   function drawFx() {
     const l = $("#fxLayer"); if (!l) return;
-    if (!S.fx.length) { if (l.childNodes.length) l.innerHTML = ""; return; }
-    let s = "";
+    let s = drawDcaVisual(performance.now());
     S.fx.forEach(f => {
       const k = Math.max(0, f.t / f.life);
       if (f.k === "shot") {

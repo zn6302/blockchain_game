@@ -42,11 +42,20 @@ export class ArenaRoom extends Room {
       if (!CLASS_KEYS.includes(clsKey)) return;
       this.pickedClass[pi] = clsKey;
       this.state.players[pi].cls = clsKey;
+      /* 四人房仍可自動開局，但一定要等最後加入的人也實際看過並完成選角。
+         原本在 onJoin() 裡直接開始，第四位玩家根本沒有送 pickClass 的機會。 */
+      if (this.humanCount() === 4 && this.allHumansPicked()) this.startMatch();
     });
     this.onMessage("startNow", (client) => {
       if (this.state.phase !== "lobby") return;
       // 只有房主能開局:其他人按了(或偽造訊息)都當沒發生
       if (this.seatOf.get(client.sessionId) !== this.state.hostIndex) return;
+      /* 不允許房主在剛有人加入、對方還停在選角畫面時搶先開局。
+         電腦座位不需要選角，只有已加入的真人必須完成選擇。 */
+      if (!this.allHumansPicked()) {
+        client.send("toast", { msg: "還有玩家正在選擇身份", kind: "warn", ms: 2400 });
+        return;
+      }
       this.startMatch();
     });
     this.onMessage("summon", (client, msg) =>
@@ -71,11 +80,13 @@ export class ArenaRoom extends Room {
     seat.isBot = false;
     seat.sessionId = client.sessionId;
     seat.name = (options && options.name) || `玩家${seatIdx + 1}`;
+    /* 座位可能曾被離開的真人使用；新玩家一定從未選角狀態開始。 */
+    seat.cls = "";
+    this.pickedClass[seatIdx] = null;
     this.seatOf.set(client.sessionId, seatIdx);
     this.clientsBySeat[seatIdx] = client;
     if (this.state.hostIndex < 0) this.state.hostIndex = seatIdx;  // 第一個進來的就是建房的人
 
-    if (this.humanCount() === 4) this.startMatch();
   }
 
   async onLeave(client) {
@@ -85,7 +96,7 @@ export class ArenaRoom extends Room {
     this.clientsBySeat[pi] = null;
 
     if (this.state.phase === "lobby") {
-      seat.isBot = true; seat.sessionId = ""; seat.name = "";
+      seat.isBot = true; seat.sessionId = ""; seat.name = ""; seat.cls = "";
       this.pickedClass[pi] = null;
       this.seatOf.delete(client.sessionId);
       /* 房主跑了就把房主讓給還在的人,不然剩下的人誰都按不了開始,整間房卡死。 */
@@ -110,6 +121,10 @@ export class ArenaRoom extends Room {
 
   humanCount() {
     return this.state.players.filter(p => !p.isBot).length;
+  }
+
+  allHumansPicked() {
+    return this.state.players.every((p, i) => p.isBot || !!this.pickedClass[i]);
   }
 
   forSeat(client, fn) {

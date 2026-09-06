@@ -18,6 +18,8 @@ export const S = {
   /* 自己放招時的橫幅:{ cls, until, seq }。純視覺,由 engine 收到 ult 特效時寫入,
      所以它跟 fx 一樣是「事件」而不是伺服器同步過來的狀態。 */
   ultCast: null,
+  /* 定期定額的 24 秒場上演出。純客戶端計時，不參與伺服器技能判定。 */
+  dcaVisual: {},
   stats: null, lessonsCache: null,
 };
 
@@ -30,7 +32,7 @@ export function resetRoomState() {
     unlocked: false,
     t: 180, running: false, selU: null,
     units: [], players: [], over: false,
-    evtT: 10, pending: null, trend: null, hint: "", fx: [], ultCast: null,
+    evtT: 10, pending: null, trend: null, hint: "", fx: [], ultCast: null, dcaVisual: {},
     stats: null, lessonsCache: null,
   });
 }
