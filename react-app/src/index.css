@@ -441,7 +441,7 @@ svg.map.drag{cursor:grabbing}
   padding:11px 22px;min-height:44px}
 .btn.ghost{background:none;border:1px solid var(--line);color:var(--txt);font-weight:700}
 .btn:disabled{opacity:.45;cursor:not-allowed}
-.foot{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end}
+.foot{display:flex;flex-wrap:wrap;gap:14px;justify-content:flex-end;margin-top:18px}
 .hint{font-size:10.5px;color:var(--faint);font-family:var(--mono);letter-spacing:.3px}
 
 /* ---------- 房號配對 ---------- */
@@ -711,7 +711,7 @@ svg.map.drag{cursor:grabbing}
   .ultrow b{font-size:9.5px}.ultrow i{font-size:8.5px}
   .iphero .ipcat{height:84px}
   .ipword{height:26px}
-  .foot{justify-content:flex-end}
+  .foot{justify-content:flex-end;gap:10px;margin-top:10px}
   .foot .btn{flex:none}
   /* 橫式：大招只留名字＋狀態，說明收起來 */
   .ultcol{max-width:none;flex:none}
